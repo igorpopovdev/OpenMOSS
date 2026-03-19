@@ -1,57 +1,57 @@
-# OpenMOSS 任务调度中间件 — 配置文件模板
-# 复制此文件为 config.yaml 并修改配置
+# OpenMOSS — шаблон конфигурации
+# Скопируйте этот файл как config.yaml и измените настройки
 
-# 项目名称
+# Название проекта
 project:
   name: "OpenMOSS"
 
-# 管理员配置
+# Конфигурация администратора
 admin:
-  password: "admin123" # 首次启动后自动替换为 MD5 加密
+  password: "admin123" # После первого запуска автоматически заменяется на MD5-хеш
 
-# Agent 注册
+# Регистрация агентов
 agent:
-  registration_token: "openclaw-register-2024" # Agent 自动注册令牌
-  allow_registration: true # Agent 自注册开关（false=关闭自注册，只能由管理员创建）
+  registration_token: "openclaw-register-2024" # Токен автоматической регистрации агентов
+  allow_registration: true # Включить саморегистрацию агентов (false=только через админку)
 
-# CLI 工具版本（task-cli.py 自更新用，更新 CLI 后递增此值）
+# Версия CLI (для автообновления task-cli.py — увеличивайте после обновления)
 cli:
   version: 1
 
-# 通知渠道（OpenMOSS 内置消息，Agent 通过 GET /config/notification 获取后自行发送）
+# Каналы уведомлений (OpenMOSS отправляет события, агенты получают через GET /config/notification)
 notification:
   enabled: false
-  # 目标渠道：格式为 渠道类型:目标ID
+  # Каналы: тип:ID
   channels: []
-    # - "chat:oc_1f99abbba2bf0f8733377893d976ffa5"   # 飞书群（把 Agent 拉进群/艾特一次即可获取 chat_id）
-    # - "user:ou_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"        # 飞书私聊（open_id）
-  # 触发通知的事件类型
+    # - "chat:oc_1f99abbba2bf0f8733377893d976ffa5"   # Групповой чат (добавьте агента в чат и упомяните его один раз)
+    # - "user:ou_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"        # Личные сообщения (open_id)
+  # Типы событий для уведомлений
   events:
-    - task_completed # 子任务完成时通知
-    - review_rejected # 审查驳回（返工）时通知
-    - all_done # 整个任务所有子任务全部完成时通知
-    - patrol_alert # 巡查发现异常时通知
+    - task_completed    # Подзадача завершена
+    - review_rejected    # Рецензия отклонена (доработка)
+    - all_done          # Все подзадачи выполнены
+    - patrol_alert      # Патруль обнаружил аномалию
 
-# 服务配置
+# Конфигурация сервера
 server:
   port: 6565
   host: "0.0.0.0"
-  external_url: ""  # 服务外网访问地址（Agent 对接用，如 https://moss.example.com）
+  external_url: ""  # Внешний URL (для агентов), напр. https://moss.example.com
 
-# 数据库配置
+# Конфигурация базы данных
 database:
   type: sqlite
   path: "./data/tasks.db"
 
-# 工作目录
+# Рабочая директория
 workspace:
-  root: "/Users/xiaohuang/Desktop/TaskWork"
+  root: "/home/user/workspace"
 
-# WebUI 配置
+# Конфигурация WebUI
 webui:
-  public_feed: false # 活动流展示页公开开关（true=任何人可访问）
-  feed_retention_days: 7 # 请求日志保留天数（超期自动清理）
+  public_feed: false # Публичный доступ к ленте активности (true=без авторизации)
+  feed_retention_days: 7 # Срок хранения логов (дни)
 
-# 初始化标记（由 Setup Wizard 自动设置，请勿手动修改）
+# Метка инициализации (устанавливается мастером настройки — не изменяйте вручную)
 setup:
   initialized: false

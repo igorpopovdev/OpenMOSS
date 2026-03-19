@@ -25,7 +25,7 @@ const sortedAgents = computed(() => props.agents)
         <AgentCard v-for="agent in sortedAgents" :key="agent.id" :agent="agent" :selected="selectedAgentId === agent.id"
             :flashing="flashingAgentIds.has(agent.id)" @select="handleSelect(agent.id)" />
         <div v-if="!sortedAgents.length" class="w-full text-center text-xs text-muted-foreground/40 py-6">
-            暂无 Agent
+            Нет агентов
         </div>
     </div>
 </template>

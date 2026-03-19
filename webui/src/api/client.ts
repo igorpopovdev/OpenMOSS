@@ -6,7 +6,7 @@ const api = axios.create({
   timeout: 10000,
 })
 
-// 请求拦截器：自动附加 Admin Token
+// Перехватчик запросов: автоматически добавляем Admin Token
 api.interceptors.request.use((config) => {
   const auth = useAuthStore()
   if (auth.token) {
@@ -15,7 +15,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// 响应拦截器：处理 403 自动跳转登录（排除登录接口本身）
+// Перехватчик ответов: при 403 автоматически на /login (кроме самого интерфейса входа)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -133,7 +133,7 @@ export interface AdminSubTaskListParams {
   sort_order?: string
 }
 
-// ── Agent 管理端类型 ──
+// ── Типы для управления агентами ──
 
 export interface AdminAgentItem {
   id: string
@@ -176,7 +176,7 @@ export interface AdminAgentListParams {
 }
 
 // ============================================================
-// API 模块
+// API 
 // ============================================================
 
 export const adminApi = {
@@ -240,7 +240,7 @@ export const agentApi = {
   get: (id: string) => api.get(`/agents/${id}`),
 }
 
-// ── 管理端仪表盘类型 ──
+// ── Типы для дашборда админки ──
 
 export interface DashboardCoreCards {
   open_task_count: number
@@ -356,7 +356,7 @@ export const scoreApi = {
     api.post('/scores/adjust', data),
 }
 
-// ── 管理端积分类型 ──
+// ── Типы для баллов ──
 
 export interface AdminScoreSummary {
   total_agents: number
@@ -431,7 +431,7 @@ export const reviewApi = {
   get: (id: string) => api.get(`/review-records/${id}`),
 }
 
-// ── 管理端审查记录类型 ──
+// ── Типы для записей рецензий ──
 
 export interface AdminReviewListItem {
   id: string
@@ -483,7 +483,7 @@ export const logApi = {
     api.get('/logs', { params }),
 }
 
-// ── 管理端活动日志类型 ──
+// ── Типы для логов активности ──
 
 export interface AdminActivityLogItem {
   id: string
@@ -561,7 +561,7 @@ export const adminConfigApi = {
     }),
 }
 
-// ── 提示词管理 ──────────────────────────────────────────
+// ── Управление промптами ──────────────────────────────────────────
 
 export interface PromptTemplate {
   role: string
@@ -586,13 +586,13 @@ export interface AgentPromptDetail extends AgentPromptMeta {
 }
 
 export const promptsApi = {
-  // 模板
+  // 
   listTemplates: () => api.get<PromptTemplate[]>('/admin/prompts/templates'),
   getTemplate: (role: string) => api.get<PromptTemplate>(`/admin/prompts/templates/${role}`),
   updateTemplate: (role: string, content: string) =>
     api.put(`/admin/prompts/templates/${role}`, { content }),
 
-  // Agent 提示词
+  // Промпты агентов
   listAgents: () => api.get<AgentPromptMeta[]>('/admin/prompts/agents'),
   getAgent: (slug: string) => api.get<AgentPromptDetail>(`/admin/prompts/agents/${slug}`),
   createAgent: (data: {
@@ -610,9 +610,9 @@ export const promptsApi = {
   }) => api.put(`/admin/prompts/agents/${slug}`, data),
   deleteAgent: (slug: string) => api.delete(`/admin/prompts/agents/${slug}`),
 
-  // 组合（一键复制）
+  // Компоновка (копировать всё)
   compose: (slug: string) => api.get<{ slug: string; prompt: string }>(`/admin/prompts/compose/${slug}`),
 
-  // 平台对接指引
+  // Руководство по подключению
   getOnboarding: (role: string) => api.get<{ role: string; content: string }>(`/admin/prompts/onboarding/${role}`),
 }

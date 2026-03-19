@@ -2,9 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { setupApi } from '@/api/client'
 
-// 缓存初始化状态，避免每次路由跳转都请求
+// Кэшируем состояние инициализации, чтобы не запрашивать при каждой навигации
 let _setupChecked = false
-let _isInitialized = true // 默认 true，避免闪烁
+let _isInitialized = true // По умолчанию true, чтобы избежать мерцания
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,19 +12,19 @@ const router = createRouter({
     {
       path: '/setup',
       name: 'setup',
-      component: () => import('@/views/SetupView.vue'),
+      component: () => import('@/views/НастройкаView.vue'),
       meta: { requiresAuth: false },
     },
     {
       path: '/feed',
       name: 'feed',
-      component: () => import('@/views/FeedView.vue'),
+      component: () => import('@/views/ЛентаView.vue'),
       meta: { requiresAuth: false },
     },
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/LoginView.vue'),
+      component: () => import('@/views/ВходView.vue'),
       meta: { requiresAuth: false },
     },
     {
@@ -39,74 +39,74 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'dashboard',
-          component: () => import('@/views/DashboardView.vue'),
+          component: () => import('@/views/ПанельView.vue'),
         },
         {
           path: 'tasks',
           name: 'tasks',
-          component: () => import('@/views/TasksView.vue'),
+          component: () => import('@/views/ЗадачиView.vue'),
         },
         {
           path: 'agents',
           name: 'agents',
-          component: () => import('@/views/AgentsView.vue'),
+          component: () => import('@/views/АгентыView.vue'),
         },
         {
           path: 'scores',
           name: 'scores',
-          component: () => import('@/views/ScoresView.vue'),
+          component: () => import('@/views/РейтингView.vue'),
         },
         {
           path: 'logs',
           name: 'logs',
-          component: () => import('@/views/LogsView.vue'),
+          component: () => import('@/views/ЛогиView.vue'),
         },
         {
           path: 'reviews',
           name: 'reviews',
-          component: () => import('@/views/ReviewsView.vue'),
+          component: () => import('@/views/РецензииView.vue'),
         },
         {
           path: 'prompts',
           name: 'prompts',
-          component: () => import('@/views/PromptsView.vue'),
+          component: () => import('@/views/ПромптыView.vue'),
         },
         {
           path: 'settings',
           name: 'settings',
-          component: () => import('@/views/SettingsView.vue'),
+          component: () => import('@/views/НастройкиView.vue'),
         },
       ],
     },
   ],
 })
 
-// 路由守卫：初始化检查 + 登录检查
+// Роутер：Проверка инициализации + проверка авторизации
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // 检查初始化状态（仅一次）
+  // Проверяем состояние инициализации (один раз)
   if (!_setupChecked) {
     try {
       const { data } = await setupApi.status()
       _isInitialized = data.initialized
     } catch {
-      // 接口不存在或出错，视为已初始化（兼容旧版本）
+      // Интерфейс не существует или ошибка — инициализировано (совместимость)
       _isInitialized = true
     }
     _setupChecked = true
   }
 
-  // 未初始化 → 强制跳转 /setup
+  // Не инициализировано → Принудительный переход на /setup
   if (!_isInitialized && to.name !== 'setup') {
     return { name: 'setup' }
   }
-  // 已初始化 → 不允许访问 /setup
+  // Инициализировано → запрещаем доступ к /setup
   if (_isInitialized && to.name === 'setup') {
     return { name: 'login' }
   }
 
-  // 原有的登录检查
+  // Оригинальная проверка авторизации
   if (to.meta.requiresAuth !== false && !auth.isAuthenticated) {
     return { name: 'login' }
   }
@@ -117,8 +117,8 @@ router.beforeEach(async (to) => {
 
 export default router
 
-/** 重置初始化状态缓存（初始化完成后调用） */
-export function resetSetupCache() {
+/** Сброс кэша инициализации（Инициализация завершенавызов） */
+export function resetНастройкаCache() {
   _setupChecked = false
   _isInitialized = true
 }

@@ -1,5 +1,5 @@
 /**
- * 活动流翻译逻辑 — 将原始请求日志转换为人类可读的活动描述
+ * Логика перевода ленты активности — преобразование сырых логов в читаемые описания
  */
 
 export interface FeedLog {
@@ -25,9 +25,9 @@ export interface FeedAgent {
 
 export interface TranslatedActivity {
   id: string
-  icon: string        // Lucide 图标名
+  icon: string
   verb: string
-  colorClass: string  // Tailwind bg 颜色类
+  colorClass: string
   agentName: string
   agentRole: string
   agentId: string
@@ -42,7 +42,7 @@ export interface TranslatedActivity {
 }
 
 // ============================================================
-// 路由 → 人话映射规则（icon 改为 Lucide 组件名）
+// Правила маппинга route → человеческие описания
 // ============================================================
 
 interface RouteRule {
@@ -54,54 +54,49 @@ interface RouteRule {
 }
 
 const ROUTE_RULES: RouteRule[] = [
-  { pattern: /POST \/api\/agents\/register/, icon: 'UserPlus', verb: '注册了新 Agent', colorClass: 'bg-emerald-500', extractFields: ['name', 'role'] },
-  { pattern: /POST \/api\/tasks$/, icon: 'ListPlus', verb: '创建了任务', colorClass: 'bg-blue-500', extractFields: ['name'] },
-  { pattern: /POST \/api\/tasks\/.*\/modules/, icon: 'FolderPlus', verb: '创建了模块', colorClass: 'bg-indigo-500', extractFields: ['name'] },
-  { pattern: /POST \/api\/sub-tasks$/, icon: 'FilePlus', verb: '创建了子任务', colorClass: 'bg-violet-500', extractFields: ['name'] },
-  { pattern: /POST \/api\/sub-tasks\/.*\/claim/, icon: 'Hand', verb: '认领了子任务', colorClass: 'bg-amber-500' },
-  { pattern: /POST \/api\/sub-tasks\/.*\/start/, icon: 'Play', verb: '开始执行子任务', colorClass: 'bg-orange-500' },
-  { pattern: /POST \/api\/sub-tasks\/.*\/submit/, icon: 'PackageCheck', verb: '提交了子任务', colorClass: 'bg-green-500' },
-  { pattern: /PUT \/api\/sub-tasks\//, icon: 'Pencil', verb: '编辑了子任务', colorClass: 'bg-slate-500' },
-  { pattern: /POST \/api\/review-records/, icon: 'FileSearch', verb: '提交了审查', colorClass: 'bg-purple-500', extractFields: ['score', 'comment', 'result'] },
-  { pattern: /POST \/api\/logs/, icon: 'MessageSquare', verb: '写了活动日志', colorClass: 'bg-gray-500', extractFields: ['action', 'summary'] },
-  { pattern: /POST \/api\/scores\/adjust/, icon: 'Trophy', verb: '调整了积分', colorClass: 'bg-yellow-500', extractFields: ['score_delta', 'reason'] },
-  { pattern: /GET \/api\/rules/, icon: 'BookOpen', verb: '查询了规则指令', colorClass: 'bg-sky-500', extractFields: ['task_id', 'sub_task_id'] },
-  { pattern: /GET \/api\/tasks$/, icon: 'Eye', verb: '查看了任务列表', colorClass: 'bg-slate-400', extractFields: ['status', 'type'] },
-  { pattern: /GET \/api\/tasks\//, icon: 'Eye', verb: '查看了任务详情', colorClass: 'bg-slate-400' },
-  { pattern: /GET \/api\/sub-tasks\/available/, icon: 'Search', verb: '查找可认领子任务', colorClass: 'bg-cyan-500', extractFields: ['status', 'priority', 'type'] },
-  { pattern: /GET \/api\/sub-tasks\/mine/, icon: 'ClipboardList', verb: '查看了自己的子任务', colorClass: 'bg-slate-400', extractFields: ['status'] },
-  { pattern: /GET \/api\/sub-tasks\/latest/, icon: 'FileText', verb: '查看最新子任务', colorClass: 'bg-slate-400' },
-  { pattern: /GET \/api\/sub-tasks/, icon: 'ClipboardList', verb: '查看了子任务', colorClass: 'bg-slate-400', extractFields: ['status', 'assigned_agent'] },
-  { pattern: /GET \/api\/scores\/me/, icon: 'Award', verb: '查看了自己的积分', colorClass: 'bg-amber-400' },
-  { pattern: /GET \/api\/scores\/leaderboard/, icon: 'Medal', verb: '查看了排行榜', colorClass: 'bg-yellow-500' },
-  { pattern: /GET \/api\/config\/notification/, icon: 'Bell', verb: '查询了通知配置', colorClass: 'bg-rose-500' },
-  { pattern: /GET \/api\/logs\/mine/, icon: 'ScrollText', verb: '查看了自己的日志', colorClass: 'bg-gray-400', extractFields: ['action'] },
-  { pattern: /GET \/api\/logs/, icon: 'ScrollText', verb: '查看了活动日志', colorClass: 'bg-gray-400', extractFields: ['action', 'agent_id'] },
-  { pattern: /GET \/api\/review-records/, icon: 'FileSearch', verb: '查看了审查记录', colorClass: 'bg-purple-400', extractFields: ['sub_task_id'] },
+  { pattern: /POST \/api\/agents\/register/, icon: 'UserPlus', verb: 'зарегистрировал нового агента', colorClass: 'bg-emerald-500', extractFields: ['name', 'role'] },
+  { pattern: /POST \/api\/tasks$/, icon: 'ListPlus', verb: 'создал задачу', colorClass: 'bg-blue-500', extractFields: ['name'] },
+  { pattern: /POST \/api\/tasks\/.*\/modules/, icon: 'FolderPlus', verb: 'создал модуль', colorClass: 'bg-indigo-500', extractFields: ['name'] },
+  { pattern: /POST \/api\/sub-tasks$/, icon: 'FilePlus', verb: 'создал подзадачу', colorClass: 'bg-violet-500', extractFields: ['name'] },
+  { pattern: /POST \/api\/sub-tasks\/.*\/claim/, icon: 'Hand', verb: 'принял подзадачу', colorClass: 'bg-amber-500' },
+  { pattern: /POST \/api\/sub-tasks\/.*\/start/, icon: 'Play', verb: 'начал выполнение подзадачи', colorClass: 'bg-orange-500' },
+  { pattern: /POST \/api\/sub-tasks\/.*\/submit/, icon: 'PackageCheck', verb: 'отправил подзадачу', colorClass: 'bg-green-500' },
+  { pattern: /PUT \/api\/sub-tasks\//, icon: 'Pencil', verb: 'изменил подзадачу', colorClass: 'bg-slate-500' },
+  { pattern: /POST \/api\/review-records/, icon: 'FileSearch', verb: 'отправил рецензию', colorClass: 'bg-purple-500', extractFields: ['score', 'comment', 'result'] },
+  { pattern: /POST \/api\/logs/, icon: 'MessageSquare', verb: 'записал лог активности', colorClass: 'bg-gray-500', extractFields: ['action', 'summary'] },
+  { pattern: /POST \/api\/scores\/adjust/, icon: 'Trophy', verb: 'изменил баллы', colorClass: 'bg-yellow-500', extractFields: ['score_delta', 'reason'] },
+  { pattern: /GET \/api\/rules/, icon: 'BookOpen', verb: 'запросил правила', colorClass: 'bg-sky-500', extractFields: ['task_id', 'sub_task_id'] },
+  { pattern: /GET \/api\/tasks$/, icon: 'Eye', verb: 'просмотрел список задач', colorClass: 'bg-slate-400', extractFields: ['status', 'type'] },
+  { pattern: /GET \/api\/tasks\//, icon: 'Eye', verb: 'просмотрел задачу', colorClass: 'bg-slate-400' },
+  { pattern: /GET \/api\/sub-tasks\/available/, icon: 'Search', verb: 'искал доступные подзадачи', colorClass: 'bg-cyan-500', extractFields: ['status', 'priority', 'type'] },
+  { pattern: /GET \/api\/sub-tasks\/mine/, icon: 'ClipboardList', verb: 'просмотрел свои подзадачи', colorClass: 'bg-slate-400', extractFields: ['status'] },
+  { pattern: /GET \/api\/sub-tasks\/latest/, icon: 'FileText', verb: 'просмотрел свежие подзадачи', colorClass: 'bg-slate-400' },
+  { pattern: /GET \/api\/sub-tasks/, icon: 'ClipboardList', verb: 'просмотрел подзадачи', colorClass: 'bg-slate-400', extractFields: ['status', 'assigned_agent'] },
+  { pattern: /GET \/api\/scores\/me/, icon: 'Award', verb: 'проверил свои баллы', colorClass: 'bg-amber-400' },
+  { pattern: /GET \/api\/scores\/leaderboard/, icon: 'Medal', verb: 'открыл рейтинг', colorClass: 'bg-yellow-500' },
+  { pattern: /GET \/api\/config\/notification/, icon: 'Bell', verb: 'запросил настройки уведомлений', colorClass: 'bg-rose-500' },
+  { pattern: /GET \/api\/logs\/mine/, icon: 'ScrollText', verb: 'просмотрел свои логи', colorClass: 'bg-gray-400', extractFields: ['action'] },
+  { pattern: /GET \/api\/logs/, icon: 'ScrollText', verb: 'просмотрел логи', colorClass: 'bg-gray-400', extractFields: ['action', 'agent_id'] },
+  { pattern: /GET \/api\/review-records/, icon: 'FileSearch', verb: 'просмотрел рецензии', colorClass: 'bg-purple-400', extractFields: ['sub_task_id'] },
 ]
 
 const ROLE_LABELS: Record<string, string> = {
-  planner: '规划者',
-  executor: '执行者',
-  reviewer: '审查者',
-  patrol: '巡查者',
+  planner: 'Планировщик',
+  executor: 'Исполнитель',
+  reviewer: 'Рецензент',
+  patrol: 'Патрульный',
 }
 
-// query 参数中文标签
 const PARAM_LABELS: Record<string, string> = {
-  status: '状态',
-  priority: '优先级',
-  type: '类型',
-  task_id: '任务',
-  sub_task_id: '子任务',
-  agent_id: 'Agent',
-  assigned_agent: '执行者',
-  action: '动作',
+  status: 'Статус',
+  priority: 'Приоритет',
+  type: 'Тип',
+  task_id: 'Задача',
+  sub_task_id: 'Подзадача',
+  agent_id: 'Агент',
+  assigned_agent: 'Исполнитель',
+  action: 'Действие',
 }
-
-// ============================================================
-// 翻译函数
-// ============================================================
 
 export function translateLog(log: FeedLog): TranslatedActivity {
   const key = `${log.method} ${log.path}`
@@ -133,7 +128,7 @@ export function translateLog(log: FeedLog): TranslatedActivity {
   }
 
   if (rule?.pattern.test('POST /api/review-records') && details.score) {
-    objectName = `${details.score} 分`
+    objectName = `${details.score} баллов`
     delete details.score
   }
 
@@ -145,9 +140,9 @@ export function translateLog(log: FeedLog): TranslatedActivity {
   return {
     id: log.id,
     icon: rule?.icon ?? 'Activity',
-    verb: rule?.verb ?? `访问了 ${log.path}`,
+    verb: rule?.verb ?? `обратился к ${log.path}`,
     colorClass: rule?.colorClass ?? 'bg-slate-500',
-    agentName: log.agent_name ?? '未知',
+    agentName: log.agent_name ?? 'Неизвестный',
     agentRole: ROLE_LABELS[log.agent_role ?? ''] ?? log.agent_role ?? '',
     agentId: log.agent_id ?? '',
     objectName,
@@ -167,17 +162,13 @@ export function formatRelativeTime(timestamp: string | null): string {
   const then = new Date(timestamp).getTime()
   const diff = Math.floor((now - then) / 1000)
 
-  if (diff < 10) return '刚刚'
+  if (diff < 10) return 'только что'
   if (diff < 60) return `${diff}s`
   if (diff < 3600) return `${Math.floor(diff / 60)}m`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
   if (diff < 604800) return `${Math.floor(diff / 86400)}d`
-  return new Date(timestamp).toLocaleDateString('zh-CN')
+  return new Date(timestamp).toLocaleDateString('ru-RU')
 }
-
-// ============================================================
-// Agent Summary 类型 + 动作分类
-// ============================================================
 
 export interface SubTaskBrief {
   id: string
@@ -210,7 +201,6 @@ export type ActionCategory = 'complete' | 'execute' | 'create' | 'query' | 'scor
 export function getActionCategory(action: RecentAction): ActionCategory {
   const key = `${action.method} ${action.path}`
 
-  // 积分调整 — 检查 score_delta
   if (/POST \/api\/scores\/adjust/.test(key) && action.request_body) {
     try {
       const body = JSON.parse(action.request_body)
@@ -218,16 +208,10 @@ export function getActionCategory(action: RecentAction): ActionCategory {
     } catch { /* fall through */ }
   }
 
-  // 完成类
   if (/POST .*\/submit/.test(key) || /POST .*\/review-records/.test(key)) return 'complete'
-
-  // 执行类
   if (/POST .*\/claim/.test(key) || /POST .*\/start/.test(key) || /PUT \/api\/sub-tasks/.test(key)) return 'execute'
-
-  // 创建类
   if (action.method === 'POST') return 'create'
 
-  // 查询类
   return 'query'
 }
 
@@ -236,4 +220,3 @@ export function getActionVerb(action: RecentAction): string {
   const rule = ROUTE_RULES.find((r) => r.pattern.test(key))
   return rule?.verb ?? `${action.method} ${action.path.split('/api')[1] ?? action.path}`
 }
-

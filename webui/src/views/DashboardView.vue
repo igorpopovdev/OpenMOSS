@@ -1,746 +1,550 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive, nextTick } from 'vue'
-import {
-    adminDashboardApi,
-    type DashboardOverview,
-    type DashboardHighlights,
-    type DashboardTrends,
-} from '@/api/client'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { adminDashboardApi, type DashboardOverview, type DashboardHighlights } from '@/api/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
-    ListTodo,
-    Activity,
-    ClipboardCheck,
-    AlertTriangle,
-    Users,
-    CheckCircle2,
-    RefreshCw,
-    Loader2,
     AlertCircle,
-    TrendingUp,
-    TrendingDown,
-    Ban,
+    AlertTriangle,
+    ArrowRight,
+    BarChart3,
+    Bot,
+    ChevronRight,
     Clock,
-    Zap,
-    Moon,
+    Flag,
+    Loader2,
+    RefreshCw,
     Star,
+    Target,
+    TrendingUp,
+    Zap,
 } from 'lucide-vue-next'
 
+const router = useRouter()
+const overview = ref<DashboardOverview | null>(null)
+const highlights = ref<DashboardHighlights | null>(null)
 const loading = ref(true)
 const error = ref('')
-const data = ref<DashboardOverview | null>(null)
-const highlights = ref<DashboardHighlights | null>(null)
-const trends = ref<DashboardTrends | null>(null)
+const refreshing = ref(false)
 
 onMounted(() => {
-    void loadData()
+    load()
 })
 
-async function loadData() {
+async function load() {
     loading.value = true
     error.value = ''
     try {
-        const [overviewRes, highlightsRes, trendsRes] = await Promise.all([
+        const [overviewRes, highlightsRes] = await Promise.all([
             adminDashboardApi.overview(),
-            adminDashboardApi.highlights({ limit: 5 }),
-            adminDashboardApi.trends({ days: 7 }),
+            adminDashboardApi.highlights({ limit: 8, inactive_hours: 24 }),
         ])
-        data.value = overviewRes.data
+        overview.value = overviewRes.data
         highlights.value = highlightsRes.data
-        trends.value = trendsRes.data
-        await nextTick()
-        triggerAnimations()
     } catch (e) {
         console.error('Failed to load dashboard', e)
-        error.value = '仪表盘数据加载失败'
+        error.value = 'Ошибка загрузки данных'
     } finally {
         loading.value = false
     }
 }
 
-function formatRelativeTime(value: string | null) {
-    if (!value) return '—'
+async function refresh() {
+    refreshing.value = true
+    await load()
+    refreshing.value = false
+}
+
+const taskStatusMap: Record<string, { label: string; color: string }> = {
+    planning: { label: 'Планируется', color: 'text-violet-600' },
+    active: { label: 'Активна', color: 'text-amber-600' },
+    in_progress: { label: 'В работе', color: 'text-sky-600' },
+    completed: { label: 'Завершена', color: 'text-emerald-600' },
+    archived: { label: 'В архиве', color: 'text-stone-600' },
+    cancelled: { label: 'Отменена', color: 'text-rose-600' },
+}
+
+const subTaskStatusMap: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Ожидает', color: 'text-slate-600' },
+    assigned: { label: 'Назначена', color: 'text-indigo-600' },
+    in_progress: { label: 'Выполняется', color: 'text-sky-600' },
+    review: { label: 'На проверке', color: 'text-amber-600' },
+    rework: { label: 'Доработка', color: 'text-orange-600' },
+    blocked: { label: 'Заблокирована', color: 'text-rose-600' },
+    done: { label: 'Готово', color: 'text-emerald-600' },
+    cancelled: { label: 'Отменена', color: 'text-stone-600' },
+}
+
+const agentStatusMap: Record<string, { label: string; color: string }> = {
+    active: { label: 'Работает', color: 'text-emerald-600' },
+    disabled: { label: 'Отключен', color: 'text-gray-500' },
+}
+
+const agentRoleMap: Record<string, string> = {
+    planner: 'Планировщик',
+    executor: 'Исполнитель',
+    reviewer: 'Рецензент',
+    patrol: 'Патрульный',
+}
+
+const reviewResultMap: Record<string, string> = {
+    approved: 'Одобрено',
+    rejected: 'Отклонено',
+}
+
+function formatRelativeTime(dateStr: string | null): string {
+    if (!dateStr) return '—'
+    const date = new Date(dateStr)
+    if (Number.isNaN(date.getTime())) return '—'
     const now = Date.now()
-    const time = new Date(value).getTime()
-    if (Number.isNaN(time)) return '—'
-    const diff = Math.floor((now - time) / 1000)
-    if (diff < 60) return '刚刚'
-    if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
-    if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
-    return `${Math.floor(diff / 86400)} 天前`
+    const diff = now - date.getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'только что'
+    if (mins < 60) return `${mins} мин. назад`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours} ч. назад`
+    const days = Math.floor(hours / 24)
+    return `${days} дн. назад`
 }
-
-const roleLabels: Record<string, string> = {
-    planner: '规划者', executor: '执行者', reviewer: '审查者', patrol: '巡查者',
-}
-
-function hasHighlights(h: DashboardHighlights) {
-    return h.blocked_sub_tasks.length > 0 || h.pending_review_sub_tasks.length > 0
-        || h.busy_agents.length > 0 || h.low_activity_agents.length > 0 || h.recent_reviews.length > 0
-}
-
-// ─── 数字滚动动画 ───
-
-const animatedValues = reactive<Record<string, number>>({})
-
-function animateCountUp(key: string, target: number, duration = 800) {
-    const start = animatedValues[key] || 0
-    const diff = target - start
-    if (diff === 0) { animatedValues[key] = target; return }
-    const startTime = performance.now()
-    function tick(now: number) {
-        const elapsed = now - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        // easeOutCubic
-        const eased = 1 - Math.pow(1 - progress, 3)
-        animatedValues[key] = Math.round(start + diff * eased)
-        if (progress < 1) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-}
-
-function triggerAnimations() {
-    if (!data.value) return
-    const c = data.value.core_cards
-    const entries: [string, number][] = [
-        ['open_task_count', c.open_task_count],
-        ['active_sub_task_count', c.active_sub_task_count],
-        ['review_queue_count', c.review_queue_count],
-        ['blocked_sub_task_count', c.blocked_sub_task_count],
-        ['active_agent_count', c.active_agent_count],
-        ['today_completed_sub_task_count', c.today_completed_sub_task_count],
-    ]
-    entries.forEach(([key, val], i) => {
-        setTimeout(() => animateCountUp(key, val, 900), i * 80)
-    })
-    // trend totals
-    if (trends.value) {
-        const t = trends.value
-        const trendTotals: [string, number][] = [
-            ['trend_created', t.sub_task_created_trend.reduce((a, b) => a + b.count, 0)],
-            ['trend_completed', t.sub_task_completed_trend.reduce((a, b) => a + b.count, 0)],
-            ['trend_review', t.review_trend.reduce((a, b) => a + b.total, 0)],
-            ['trend_score', t.score_delta_trend.reduce((a, b) => a + b.net_score_delta, 0)],
-            ['trend_request', t.request_trend.reduce((a, b) => a + b.count, 0)],
-            ['trend_activity', t.activity_trend.reduce((a, b) => a + b.count, 0)],
-        ]
-        trendTotals.forEach(([key, val], i) => {
-            setTimeout(() => animateCountUp(key, val, 800), 800 + i * 60)
-        })
-    }
-}
-
-// ─── 核心卡片配置 ───
-const coreCards = computed(() => {
-    if (!data.value) return []
-    const c = data.value.core_cards
-    return [
-        { title: '开放任务', value: c.open_task_count, animKey: 'open_task_count', icon: ListTodo, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-        { title: '活跃子任务', value: c.active_sub_task_count, animKey: 'active_sub_task_count', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { title: '等待审查', value: c.review_queue_count, animKey: 'review_queue_count', icon: ClipboardCheck, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-        { title: '阻塞子任务', value: c.blocked_sub_task_count, animKey: 'blocked_sub_task_count', icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-        { title: '活跃 Agent', value: c.active_agent_count, animKey: 'active_agent_count', icon: Users, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-        { title: '今日完成', value: c.today_completed_sub_task_count, animKey: 'today_completed_sub_task_count', icon: CheckCircle2, color: 'text-teal-500', bg: 'bg-teal-500/10' },
-    ]
-})
-
-// ─── 分布图表辅助 ───
-const statusLabels: Record<string, string> = {
-    // task
-    planning: '规划中', active: '活跃', in_progress: '进行中', completed: '已完成', archived: '归档', cancelled: '已取消',
-    // sub_task
-    pending: '待分配', assigned: '已分配', review: '审查中', rework: '返工中', blocked: '阻塞', done: '已完成',
-    // agent status (active 与 task.active 共用)
-    disabled: '已禁用',
-    // agent role
-    planner: '规划者', executor: '执行者', reviewer: '审查者', patrol: '巡查者',
-    // review result
-    approved: '通过', rejected: '驳回',
-}
-
-const statusColors: Record<string, string> = {
-    planning: 'bg-slate-400', active: 'bg-blue-500', in_progress: 'bg-amber-500',
-    completed: 'bg-emerald-500', archived: 'bg-gray-400', cancelled: 'bg-red-400',
-    pending: 'bg-slate-400', assigned: 'bg-sky-400', review: 'bg-amber-500',
-    rework: 'bg-orange-500', blocked: 'bg-rose-500', done: 'bg-emerald-500',
-    disabled: 'bg-gray-400',
-    planner: 'bg-violet-500', executor: 'bg-sky-500', reviewer: 'bg-amber-500', patrol: 'bg-teal-500',
-    approved: 'bg-emerald-500', rejected: 'bg-rose-500',
-}
-
-function distTotal(dist: Record<string, number>) {
-    return Object.values(dist).reduce((a, b) => a + b, 0)
-}
-
-function distPercent(count: number, total: number) {
-    if (total === 0) return 0
-    return Math.round((count / total) * 100)
-}
-
-// ─── 趋势图 SVG 工具 ───
-
-const SPARK_W = 200
-const SPARK_H = 40
-
-function buildSparklinePath(values: number[]): { line: string; area: string } {
-    if (!values.length) return { line: '', area: '' }
-    const max = Math.max(...values, 1)
-    const step = SPARK_W / Math.max(values.length - 1, 1)
-    const points = values.map((v, i) => ({
-        x: i * step,
-        y: SPARK_H - (v / max) * (SPARK_H - 4) - 2,
-    }))
-    const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
-    const area = line + ` L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`
-    return { line, area }
-}
-
-interface TrendCard {
-    title: string
-    total: number
-    color: string
-    gradientId: string
-    animKey: string
-    values: number[]
-    dates: string[]
-}
-
-// Sparkline hover state
-const hoverState = reactive<{ cardIdx: number; pointIdx: number }>({
-    cardIdx: -1,
-    pointIdx: -1,
-})
-
-function getSparkPoint(values: number[], idx: number) {
-    if (idx < 0 || idx >= values.length) return { x: 0, y: 0 }
-    const max = Math.max(...values, 1)
-    const step = SPARK_W / Math.max(values.length - 1, 1)
-    return {
-        x: idx * step,
-        y: SPARK_H - ((values[idx] ?? 0) / max) * (SPARK_H - 4) - 2,
-    }
-}
-
-function formatShortDate(d: string) {
-    return d.slice(5) // "2026-03-15" -> "03-15"
-}
-
-const trendCards = computed<TrendCard[]>(() => {
-    if (!trends.value) return []
-    const t = trends.value
-    return [
-        {
-            title: '新建子任务',
-            total: t.sub_task_created_trend.reduce((a, b) => a + b.count, 0),
-            color: '#3b82f6',
-            gradientId: 'g-created',
-            animKey: 'trend_created',
-            values: t.sub_task_created_trend.map(p => p.count),
-            dates: t.sub_task_created_trend.map(p => p.date),
-        },
-        {
-            title: '完成子任务',
-            total: t.sub_task_completed_trend.reduce((a, b) => a + b.count, 0),
-            color: '#10b981',
-            gradientId: 'g-completed',
-            animKey: 'trend_completed',
-            values: t.sub_task_completed_trend.map(p => p.count),
-            dates: t.sub_task_completed_trend.map(p => p.date),
-        },
-        {
-            title: '审查总量',
-            total: t.review_trend.reduce((a, b) => a + b.total, 0),
-            color: '#f59e0b',
-            gradientId: 'g-review',
-            animKey: 'trend_review',
-            values: t.review_trend.map(p => p.total),
-            dates: t.review_trend.map(p => p.date),
-        },
-        {
-            title: '积分净变化',
-            total: t.score_delta_trend.reduce((a, b) => a + b.net_score_delta, 0),
-            color: '#8b5cf6',
-            gradientId: 'g-score',
-            animKey: 'trend_score',
-            values: t.score_delta_trend.map(p => p.net_score_delta),
-            dates: t.score_delta_trend.map(p => p.date),
-        },
-        {
-            title: 'API 请求量',
-            total: t.request_trend.reduce((a, b) => a + b.count, 0),
-            color: '#06b6d4',
-            gradientId: 'g-request',
-            animKey: 'trend_request',
-            values: t.request_trend.map(p => p.count),
-            dates: t.request_trend.map(p => p.date),
-        },
-        {
-            title: '活动日志',
-            total: t.activity_trend.reduce((a, b) => a + b.count, 0),
-            color: '#ec4899',
-            gradientId: 'g-activity',
-            animKey: 'trend_activity',
-            values: t.activity_trend.map(p => p.count),
-            dates: t.activity_trend.map(p => p.date),
-        },
-    ]
-})</script>
+</script>
 
 <template>
-    <div class="flex flex-col h-[calc(100vh-3.5rem)] overflow-y-auto">
-        <!-- 错误 -->
-        <div v-if="error" class="flex flex-col items-center justify-center py-16">
-            <AlertCircle class="h-5 w-5 text-muted-foreground" />
-            <p class="mt-2 text-sm">{{ error }}</p>
-            <Button class="mt-3" size="sm" @click="loadData">重新加载</Button>
+    <div class="p-6 max-w-7xl mx-auto space-y-6">
+
+        <!-- Заголовок -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">Панель управления</h1>
+                <p class="text-sm text-muted-foreground mt-1">
+                    Обзор задач, агентов и ключевых событий
+                </p>
+            </div>
+            <Button variant="outline" size="sm" :disabled="refreshing" @click="refresh">
+                <RefreshCw class="h-3.5 w-3.5 mr-1.5" :class="refreshing ? 'animate-spin' : ''" />
+                Обновить
+            </Button>
         </div>
 
-        <!-- 加载中 -->
-        <div v-else-if="loading" class="flex items-center justify-center py-16">
-            <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+        <!-- Загрузка -->
+        <div v-if="loading" class="flex justify-center py-20">
+            <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
 
-        <!-- 主内容 -->
-        <div v-else-if="data" class="p-5 space-y-6 max-w-5xl mx-auto w-full">
-            <!-- 顶栏 -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-lg font-semibold">仪表盘</h1>
-                    <p class="text-xs text-muted-foreground/60">
-                        数据更新于 {{ new Date(data.generated_at).toLocaleString('zh-CN') }}
-                    </p>
-                </div>
-                <Button variant="ghost" size="icon" class="h-8 w-8" @click="loadData">
-                    <RefreshCw class="h-3.5 w-3.5" />
-                </Button>
-            </div>
+        <!-- Ошибка -->
+        <div v-else-if="error" class="flex flex-col items-center py-20 text-muted-foreground">
+            <AlertCircle class="h-8 w-8 mb-3" />
+            <p class="text-lg font-medium">{{ error }}</p>
+            <Button class="mt-4" @click="load">Повторить</Button>
+        </div>
 
-            <!-- ─── 核心指标卡片 ─── -->
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Card v-for="(card, idx) in coreCards" :key="card.title"
-                    class="animate-slide-up border-border/40 hover:border-border/70 hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-default"
-                    :style="{ animationDelay: `${idx * 50}ms` }">
-                    <CardContent class="flex items-center gap-3 p-4">
-                        <div class="rounded-lg p-2.5" :class="card.bg">
-                            <component :is="card.icon" class="h-5 w-5" :class="card.color" />
-                        </div>
-                        <div>
-                            <div class="text-2xl font-bold tabular-nums leading-tight">{{ animatedValues[card.animKey]
-                                ?? card.value }}</div>
-                            <div class="text-xs text-muted-foreground">{{ card.title }}</div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+        <template v-else-if="overview">
 
-            <!-- ─── 次级指标 ─── -->
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <div class="rounded-lg border border-border/40 bg-card p-3 text-center animate-slide-up"
-                    style="animation-delay: 300ms">
-                    <div class="text-lg font-bold tabular-nums">{{ data.secondary_cards.disabled_agent_count }}</div>
-                    <div class="text-[11px] text-muted-foreground">已禁用 Agent</div>
-                </div>
-                <div class="rounded-lg border border-border/40 bg-card p-3 text-center animate-slide-up"
-                    style="animation-delay: 350ms">
-                    <div class="text-lg font-bold tabular-nums">{{ data.secondary_cards.today_review_count }}</div>
-                    <div class="text-[11px] text-muted-foreground">今日审查</div>
-                </div>
-                <div class="rounded-lg border border-border/40 bg-card p-3 text-center animate-slide-up"
-                    style="animation-delay: 400ms">
-                    <div class="text-lg font-bold tabular-nums">{{ data.secondary_cards.today_rejected_review_count }}
-                    </div>
-                    <div class="text-[11px] text-muted-foreground">今日驳回</div>
-                </div>
-                <div class="rounded-lg border border-border/40 bg-card p-3 text-center animate-slide-up"
-                    style="animation-delay: 450ms">
-                    <div class="text-lg font-bold tabular-nums">{{ data.secondary_cards.today_reject_rate.toFixed(1) }}%
-                    </div>
-                    <div class="text-[11px] text-muted-foreground">驳回率</div>
-                </div>
-                <div class="rounded-lg border border-border/40 bg-card p-3 text-center animate-slide-up"
-                    style="animation-delay: 500ms">
-                    <div class="flex items-center justify-center gap-1">
-                        <TrendingUp v-if="data.secondary_cards.today_net_score_delta >= 0"
-                            class="h-4 w-4 text-emerald-500" />
-                        <TrendingDown v-else class="h-4 w-4 text-rose-500" />
-                        <span class="text-lg font-bold tabular-nums"
-                            :class="data.secondary_cards.today_net_score_delta >= 0 ? 'text-emerald-600' : 'text-rose-600'">
-                            {{ data.secondary_cards.today_net_score_delta >= 0 ? '+' : '' }}{{
-                                data.secondary_cards.today_net_score_delta }}
-                        </span>
-                    </div>
-                    <div class="text-[11px] text-muted-foreground">今日积分净值</div>
-                </div>
-            </div>
-
-            <Separator class="opacity-40" />
-
-            <!-- ─── 状态分布 ─── -->
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <!-- 任务状态分布 -->
-                <Card class="border-border/40 animate-slide-up" style="animation-delay: 550ms">
-                    <CardHeader class="pb-2 px-4 pt-4">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">任务状态分布</CardTitle>
-                    </CardHeader>
-                    <CardContent class="px-4 pb-4 space-y-2">
-                        <template v-for="(count, key) in data.distributions.task_status_distribution" :key="key">
-                            <div class="flex items-center gap-2 text-sm">
-                                <div class="w-2 h-2 rounded-full shrink-0"
-                                    :class="statusColors[key] || 'bg-gray-400'" />
-                                <span class="flex-1 truncate">{{ statusLabels[key] || key }}</span>
-                                <span class="font-medium tabular-nums">{{ count }}</span>
-                                <span class="text-[10px] text-muted-foreground/50 w-8 text-right tabular-nums">
-                                    {{ distPercent(count, distTotal(data.distributions.task_status_distribution)) }}%
-                                </span>
+            <!-- Основные карточки -->
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <Card
+                    class="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+                    @click="router.push('/tasks')">
+                    <CardContent class="p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] text-muted-foreground uppercase tracking-wider">Открытые
+                                    задачи</p>
+                                <p class="text-3xl font-bold mt-1">{{ overview.core_cards.open_task_count }}</p>
                             </div>
-                        </template>
-                        <!-- 进度条 -->
-                        <div class="h-2 rounded-full bg-muted overflow-hidden flex mt-2">
-                            <div v-for="(count, key) in data.distributions.task_status_distribution" :key="key"
-                                class="h-full transition-all" :class="statusColors[key] || 'bg-gray-400'"
-                                :style="{ width: `${distPercent(count, distTotal(data.distributions.task_status_distribution))}%` }" />
+                            <div class="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                                <Target class="h-5 w-5 text-violet-600" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <!-- 子任务状态分布 -->
-                <Card class="border-border/40 animate-slide-up" style="animation-delay: 600ms">
-                    <CardHeader class="pb-2 px-4 pt-4">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">子任务状态分布</CardTitle>
-                    </CardHeader>
-                    <CardContent class="px-4 pb-4 space-y-2">
-                        <template v-for="(count, key) in data.distributions.sub_task_status_distribution" :key="key">
-                            <div class="flex items-center gap-2 text-sm">
-                                <div class="w-2 h-2 rounded-full shrink-0"
-                                    :class="statusColors[key] || 'bg-gray-400'" />
-                                <span class="flex-1 truncate">{{ statusLabels[key] || key }}</span>
-                                <span class="font-medium tabular-nums">{{ count }}</span>
-                                <span class="text-[10px] text-muted-foreground/50 w-8 text-right tabular-nums">
-                                    {{ distPercent(count, distTotal(data.distributions.sub_task_status_distribution))
-                                    }}%
-                                </span>
+                <Card
+                    class="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+                    @click="router.push('/tasks')">
+                    <CardContent class="p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] text-muted-foreground uppercase tracking-wider">Активные
+                                    подзадачи</p>
+                                <p class="text-3xl font-bold mt-1">
+                                    {{ overview.core_cards.active_sub_task_count }}</p>
                             </div>
-                        </template>
-                        <div class="h-2 rounded-full bg-muted overflow-hidden flex mt-2">
-                            <div v-for="(count, key) in data.distributions.sub_task_status_distribution" :key="key"
-                                class="h-full transition-all" :class="statusColors[key] || 'bg-gray-400'"
-                                :style="{ width: `${distPercent(count, distTotal(data.distributions.sub_task_status_distribution))}%` }" />
+                            <div class="h-10 w-10 rounded-xl bg-sky-100 flex items-center justify-center">
+                                <Zap class="h-5 w-5 text-sky-600" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <!-- Agent 状态分布 -->
-                <Card class="border-border/40 animate-slide-up" style="animation-delay: 650ms">
-                    <CardHeader class="pb-2 px-4 pt-4">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Agent 状态分布</CardTitle>
-                    </CardHeader>
-                    <CardContent class="px-4 pb-4 space-y-2">
-                        <template v-for="(count, key) in data.distributions.agent_status_distribution" :key="key">
-                            <div class="flex items-center gap-2 text-sm">
-                                <div class="w-2 h-2 rounded-full shrink-0"
-                                    :class="statusColors[key] || 'bg-gray-400'" />
-                                <span class="flex-1 truncate">{{ statusLabels[key] || key }}</span>
-                                <span class="font-medium tabular-nums">{{ count }}</span>
-                                <span class="text-[10px] text-muted-foreground/50 w-8 text-right tabular-nums">
-                                    {{ distPercent(count, distTotal(data.distributions.agent_status_distribution)) }}%
-                                </span>
+                <Card
+                    class="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+                    @click="router.push('/reviews')">
+                    <CardContent class="p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] text-muted-foreground uppercase tracking-wider">На проверке</p>
+                                <p class="text-3xl font-bold mt-1">{{ overview.core_cards.review_queue_count }}</p>
                             </div>
-                        </template>
-                        <div class="h-2 rounded-full bg-muted overflow-hidden flex mt-2">
-                            <div v-for="(count, key) in data.distributions.agent_status_distribution" :key="key"
-                                class="h-full transition-all" :class="statusColors[key] || 'bg-gray-400'"
-                                :style="{ width: `${distPercent(count, distTotal(data.distributions.agent_status_distribution))}%` }" />
+                            <div class="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                                <Star class="h-5 w-5 text-amber-600" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <!-- Agent 角色分布 -->
-                <Card class="border-border/40 animate-slide-up" style="animation-delay: 700ms">
-                    <CardHeader class="pb-2 px-4 pt-4">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Agent 角色分布</CardTitle>
-                    </CardHeader>
-                    <CardContent class="px-4 pb-4 space-y-2">
-                        <template v-for="(count, key) in data.distributions.agent_role_distribution" :key="key">
-                            <div class="flex items-center gap-2 text-sm">
-                                <div class="w-2 h-2 rounded-full shrink-0"
-                                    :class="statusColors[key] || 'bg-gray-400'" />
-                                <span class="flex-1 truncate">{{ statusLabels[key] || key }}</span>
-                                <span class="font-medium tabular-nums">{{ count }}</span>
-                                <span class="text-[10px] text-muted-foreground/50 w-8 text-right tabular-nums">
-                                    {{ distPercent(count, distTotal(data.distributions.agent_role_distribution)) }}%
-                                </span>
+                <Card
+                    class="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+                    @click="router.push('/tasks')">
+                    <CardContent class="p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] text-muted-foreground uppercase tracking-wider">Заблокированы
+                                </p>
+                                <p class="text-3xl font-bold mt-1"
+                                    :class="overview.core_cards.blocked_sub_task_count > 0 ? 'text-rose-600' : ''">
+                                    {{ overview.core_cards.blocked_sub_task_count }}
+                                </p>
                             </div>
-                        </template>
-                        <div class="h-2 rounded-full bg-muted overflow-hidden flex mt-2">
-                            <div v-for="(count, key) in data.distributions.agent_role_distribution" :key="key"
-                                class="h-full transition-all" :class="statusColors[key] || 'bg-gray-400'"
-                                :style="{ width: `${distPercent(count, distTotal(data.distributions.agent_role_distribution))}%` }" />
+                            <div class="h-10 w-10 rounded-xl bg-rose-100 flex items-center justify-center">
+                                <AlertTriangle class="h-5 w-5 text-rose-600" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <!-- 近 7 天审查结果分布 -->
-                <Card class="border-border/40 animate-slide-up" style="animation-delay: 750ms">
-                    <CardHeader class="pb-2 px-4 pt-4">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">近 7 天审查结果</CardTitle>
-                    </CardHeader>
-                    <CardContent class="px-4 pb-4 space-y-2">
-                        <template v-for="(count, key) in data.distributions.review_result_distribution_7d" :key="key">
-                            <div class="flex items-center gap-2 text-sm">
-                                <div class="w-2 h-2 rounded-full shrink-0"
-                                    :class="statusColors[key] || 'bg-gray-400'" />
-                                <span class="flex-1 truncate">{{ statusLabels[key] || key }}</span>
-                                <span class="font-medium tabular-nums">{{ count }}</span>
-                                <span class="text-[10px] text-muted-foreground/50 w-8 text-right tabular-nums">
-                                    {{ distPercent(count, distTotal(data.distributions.review_result_distribution_7d))
-                                    }}%
-                                </span>
+                <Card
+                    class="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+                    @click="router.push('/agents')">
+                    <CardContent class="p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] text-muted-foreground uppercase tracking-wider">Активные
+                                    агенты</p>
+                                <p class="text-3xl font-bold mt-1">
+                                    {{ overview.core_cards.active_agent_count }}</p>
                             </div>
-                        </template>
-                        <div class="h-2 rounded-full bg-muted overflow-hidden flex mt-2">
-                            <div v-for="(count, key) in data.distributions.review_result_distribution_7d" :key="key"
-                                class="h-full transition-all" :class="statusColors[key] || 'bg-gray-400'"
-                                :style="{ width: `${distPercent(count, distTotal(data.distributions.review_result_distribution_7d))}%` }" />
+                            <div class="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                <Bot class="h-5 w-5 text-emerald-600" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            <!-- ─── 趋势图 ─── -->
-            <template v-if="trends && trendCards.length">
-                <Separator class="opacity-40" />
+            <!-- Вторичные карточки -->
+            <div class="grid gap-4 sm:grid-cols-3 xl:grid-cols-5">
+                <Card>
+                    <CardContent class="p-4 space-y-1">
+                        <p class="text-[11px] text-muted-foreground/60">Выполнено сегодня</p>
+                        <p class="text-2xl font-bold text-emerald-600">
+                            +{{ overview.core_cards.today_completed_sub_task_count }}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent class="p-4 space-y-1">
+                        <p class="text-[11px] text-muted-foreground/60">Отключённые агенты</p>
+                        <p class="text-2xl font-bold"
+                            :class="overview.secondary_cards.disabled_agent_count > 0 ? 'text-stone-600' : 'text-muted-foreground'">
+                            {{ overview.secondary_cards.disabled_agent_count }}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent class="p-4 space-y-1">
+                        <p class="text-[11px] text-muted-foreground/60">Проверено сегодня</p>
+                        <p class="text-2xl font-bold">{{ overview.secondary_cards.today_review_count }}</p>
+                        <p class="text-[10px] text-muted-foreground">
+                            <span class="text-rose-500">{{ overview.secondary_cards.today_rejected_review_count }}</span>
+                            отклонено
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent class="p-4 space-y-1">
+                        <p class="text-[11px] text-muted-foreground/60">Нетто-баллы за день</p>
+                        <p class="text-2xl font-bold tabular-nums"
+                            :class="overview.secondary_cards.today_net_score_delta >= 0 ? 'text-emerald-600' : 'text-rose-500'">
+                            {{ overview.secondary_cards.today_net_score_delta >= 0 ? '+' : '' }}{{ overview.secondary_cards.today_net_score_delta }}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent class="p-4 space-y-1">
+                        <p class="text-[11px] text-muted-foreground/60">Статус рецензий</p>
+                        <p class="text-2xl font-bold">{{ (overview.secondary_cards.today_reject_rate * 100).toFixed(0) }}%</p>
+                        <p class="text-[10px] text-muted-foreground">доля отклонений</p>
+                    </CardContent>
+                </Card>
+            </div>
 
-                <div>
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-sm font-medium text-muted-foreground">近 {{ trends.days }} 天趋势</h2>
-                        <span class="text-[10px] text-muted-foreground/50 tabular-nums">{{ trends.start_date }} – {{
-                            trends.end_date }}</span>
-                    </div>
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        <Card v-for="(card, idx) in trendCards" :key="card.title"
-                            class="border-border/40 animate-slide-up overflow-hidden hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-default"
-                            :style="{ animationDelay: `${800 + idx * 50}ms` }">
-                            <CardContent class="p-4 pb-0">
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-xs text-muted-foreground">{{ card.title }}</span>
-                                    <span class="text-lg font-bold tabular-nums" :style="{ color: card.color }">{{
-                                        animatedValues[card.animKey] ?? card.total }}</span>
-                                </div>
-                                <svg :viewBox="`0 0 ${SPARK_W} ${SPARK_H}`" class="w-full h-10"
-                                    preserveAspectRatio="none"
-                                    @mouseleave="hoverState.cardIdx = -1; hoverState.pointIdx = -1">
-                                    <defs>
-                                        <linearGradient :id="card.gradientId" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" :stop-color="card.color" stop-opacity="0.3" />
-                                            <stop offset="100%" :stop-color="card.color" stop-opacity="0.02" />
-                                        </linearGradient>
-                                    </defs>
-                                    <path :d="buildSparklinePath(card.values).area" :fill="`url(#${card.gradientId})`"
-                                        class="sparkline-area" />
-                                    <path :d="buildSparklinePath(card.values).line" fill="none" :stroke="card.color"
-                                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-                                        class="sparkline-line" />
+            <!-- Распределения -->
+            <div class="grid gap-4 xl:grid-cols-3">
+                <!-- Статусы задач -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <CardTitle class="text-sm">Статусы задач</CardTitle>
+                    </CardHeader>
+                    <CardContent class="space-y-2.5">
+                        <div v-for="(count, status) in overview.distributions.task_status_distribution" :key="status"
+                            class="flex items-center gap-3">
+                            <span class="text-xs text-muted-foreground w-20 shrink-0 truncate">
+                                {{ taskStatusMap[status]?.label || status }}
+                            </span>
+                            <div class="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                                <div class="h-full rounded-full bg-violet-500 transition-all"
+                                    :style="{ width: `${Math.max((count / (overview.core_cards.open_task_count || 1)) * 100, 2)}%` }" />
+                            </div>
+                            <span class="text-xs font-medium tabular-nums w-6 text-right">{{ count }}</span>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                                    <!-- Hover targets (invisible rects for each data point) -->
-                                    <rect v-for="(_, pi) in card.values" :key="pi"
-                                        :x="pi * (SPARK_W / Math.max(card.values.length - 1, 1)) - SPARK_W / card.values.length / 2"
-                                        :y="0" :width="SPARK_W / card.values.length" :height="SPARK_H"
-                                        fill="transparent" class="cursor-crosshair"
-                                        @mouseenter="hoverState.cardIdx = idx; hoverState.pointIdx = pi" />
+                <!-- Статусы подзадач -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <CardTitle class="text-sm">Статусы подзадач</CardTitle>
+                    </CardHeader>
+                    <CardContent class="space-y-2.5">
+                        <div v-for="(count, status) in overview.distributions.sub_task_status_distribution" :key="status"
+                            class="flex items-center gap-3">
+                            <span class="text-xs text-muted-foreground w-20 shrink-0 truncate">
+                                {{ subTaskStatusMap[status]?.label || status }}
+                            </span>
+                            <div class="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                                <div class="h-full rounded-full bg-sky-500 transition-all"
+                                    :style="{ width: `${Math.max((count / (overview.core_cards.active_sub_task_count || 1)) * 100, 2)}%` }" />
+                            </div>
+                            <span class="text-xs font-medium tabular-nums w-6 text-right">{{ count }}</span>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                                    <!-- Hover indicator -->
-                                    <template v-if="hoverState.cardIdx === idx && hoverState.pointIdx >= 0">
-                                        <!-- Vertical line -->
-                                        <line :x1="getSparkPoint(card.values, hoverState.pointIdx).x"
-                                            :x2="getSparkPoint(card.values, hoverState.pointIdx).x"
-                                            :y1="0" :y2="SPARK_H"
-                                            :stroke="card.color" stroke-opacity="0.3" stroke-width="1"
-                                            stroke-dasharray="2 2" />
-                                        <!-- Dot -->
-                                        <circle :cx="getSparkPoint(card.values, hoverState.pointIdx).x"
-                                            :cy="getSparkPoint(card.values, hoverState.pointIdx).y"
-                                            r="3" :fill="card.color" stroke="white" stroke-width="1.5" />
-                                    </template>
-                                </svg>
-                                <!-- Hover tooltip (outside SVG for proper text rendering) -->
-                                <div v-if="hoverState.cardIdx === idx && hoverState.pointIdx >= 0"
-                                    class="flex items-center justify-between text-[10px] text-muted-foreground px-1 -mt-1">
-                                    <span>{{ formatShortDate(card.dates[hoverState.pointIdx] ?? '') }}</span>
-                                    <span class="font-semibold tabular-nums" :style="{ color: card.color }">{{ card.values[hoverState.pointIdx] }}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            </template>
+                <!-- Роли агентов -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <CardTitle class="text-sm">Агенты по ролям</CardTitle>
+                    </CardHeader>
+                    <CardContent class="space-y-2.5">
+                        <div v-for="(count, role) in overview.distributions.agent_role_distribution" :key="role"
+                            class="flex items-center gap-3">
+                            <span class="text-xs text-muted-foreground w-20 shrink-0 truncate">
+                                {{ agentRoleMap[role] || role }}
+                            </span>
+                            <div class="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                                <div class="h-full rounded-full bg-emerald-500 transition-all"
+                                    :style="{ width: `${Math.max((count / (overview.core_cards.active_agent_count || 1)) * 100, 2)}%` }" />
+                            </div>
+                            <span class="text-xs font-medium tabular-nums w-6 text-right">{{ count }}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
-            <!-- ─── 高亮面板 ─── -->
-            <template v-if="highlights && hasHighlights(highlights)">
-                <Separator class="opacity-40" />
+            <!-- Избранное -->
+            <div class="grid gap-4 xl:grid-cols-2">
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <!-- 阻塞子任务 -->
-                    <Card v-if="highlights.blocked_sub_tasks.length" class="border-rose-200/50 animate-slide-up"
-                        style="animation-delay: 800ms">
-                        <CardHeader class="pb-2 px-4 pt-4">
-                            <CardTitle class="text-sm font-medium flex items-center gap-1.5 text-rose-600">
-                                <Ban class="h-3.5 w-3.5" /> 阻塞子任务
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent class="px-4 pb-4 space-y-2">
+                <!-- Заблокированные подзадачи -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm">Заблокированные подзадачи</CardTitle>
+                            <Button variant="ghost" size="sm" class="h-7 text-xs"
+                                @click="router.push('/tasks?status=blocked')">
+                                Подробнее
+                                <ArrowRight class="h-3 w-3 ml-1" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="highlights?.blocked_sub_tasks.length"
+                            class="space-y-2.5">
                             <div v-for="item in highlights.blocked_sub_tasks" :key="item.id"
-                                class="rounded border border-rose-100 bg-rose-50/30 p-2.5">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-medium truncate flex-1">{{ item.name }}</span>
-                                    <span class="text-[10px] text-muted-foreground/60 shrink-0 ml-2">{{
-                                        formatRelativeTime(item.updated_at) }}</span>
-                                </div>
-                                <div class="text-[11px] text-muted-foreground mt-0.5 flex gap-3">
-                                    <span>{{ item.task_name }}</span>
-                                    <span v-if="item.assigned_agent_name">→ {{ item.assigned_agent_name }}</span>
-                                    <span v-if="item.rework_count">返工 {{ item.rework_count }} 次</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- 待审查子任务 -->
-                    <Card v-if="highlights.pending_review_sub_tasks.length" class="border-amber-200/50 animate-slide-up"
-                        style="animation-delay: 850ms">
-                        <CardHeader class="pb-2 px-4 pt-4">
-                            <CardTitle class="text-sm font-medium flex items-center gap-1.5 text-amber-600">
-                                <Clock class="h-3.5 w-3.5" /> 待审查子任务
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent class="px-4 pb-4 space-y-2">
-                            <div v-for="item in highlights.pending_review_sub_tasks" :key="item.id"
-                                class="rounded border border-amber-100 bg-amber-50/30 p-2.5">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-medium truncate flex-1">{{ item.name }}</span>
-                                    <span class="text-[10px] text-muted-foreground/60 shrink-0 ml-2">{{
-                                        formatRelativeTime(item.updated_at) }}</span>
-                                </div>
-                                <div class="text-[11px] text-muted-foreground mt-0.5">
-                                    {{ item.task_name }}
-                                    <span v-if="item.assigned_agent_name"> → {{ item.assigned_agent_name }}</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- 高负载 Agent -->
-                    <Card v-if="highlights.busy_agents.length" class="border-sky-200/50 animate-slide-up"
-                        style="animation-delay: 900ms">
-                        <CardHeader class="pb-2 px-4 pt-4">
-                            <CardTitle class="text-sm font-medium flex items-center gap-1.5 text-sky-600">
-                                <Zap class="h-3.5 w-3.5" /> 高负载 Agent
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent class="px-4 pb-4 space-y-2">
-                            <div v-for="agent in highlights.busy_agents" :key="agent.id"
-                                class="rounded border border-sky-100 bg-sky-50/30 p-2.5 flex items-center justify-between">
-                                <div>
-                                    <span class="text-sm font-medium">{{ agent.name }}</span>
-                                    <span class="text-[11px] text-muted-foreground ml-1">{{ roleLabels[agent.role] ||
-                                        agent.role }}</span>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm font-bold tabular-nums">{{ agent.open_sub_task_count }} 个任务
-                                    </div>
-                                    <div class="text-[10px] text-muted-foreground/60">积分 {{ agent.total_score }}</div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- 低活跃 Agent -->
-                    <Card v-if="highlights.low_activity_agents.length" class="border-border/40 animate-slide-up"
-                        style="animation-delay: 950ms">
-                        <CardHeader class="pb-2 px-4 pt-4">
-                            <CardTitle class="text-sm font-medium flex items-center gap-1.5 text-muted-foreground">
-                                <Moon class="h-3.5 w-3.5" /> 低活跃 Agent
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent class="px-4 pb-4 space-y-2">
-                            <div v-for="agent in highlights.low_activity_agents" :key="agent.id"
-                                class="rounded border border-border/50 bg-muted/20 p-2.5 flex items-center justify-between">
-                                <div>
-                                    <span class="text-sm font-medium">{{ agent.name }}</span>
-                                    <span class="text-[11px] text-muted-foreground ml-1">{{ roleLabels[agent.role] ||
-                                        agent.role }}</span>
-                                </div>
-                                <div class="text-[11px] text-muted-foreground/60">
-                                    最近活动 {{ formatRelativeTime(agent.last_activity_at) }}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <!-- 最近审查 -->
-                <Card v-if="highlights.recent_reviews.length" class="border-border/40 animate-slide-up"
-                    style="animation-delay: 1000ms">
-                    <CardHeader class="pb-2 px-4 pt-4">
-                        <CardTitle class="text-sm font-medium flex items-center gap-1.5 text-violet-600">
-                            <Star class="h-3.5 w-3.5" /> 最近审查
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent class="px-4 pb-4">
-                        <div class="divide-y divide-border/20">
-                            <div v-for="review in highlights.recent_reviews" :key="review.id"
-                                class="flex items-center gap-3 py-2">
-                                <div class="w-2 h-2 rounded-full shrink-0"
-                                    :class="review.result === 'approved' ? 'bg-emerald-500' : 'bg-rose-500'" />
+                                class="flex items-start gap-2.5 rounded-lg border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                @click="router.push(`/tasks?t=${item.task_id}`)">
+                                <div class="mt-0.5 w-2 h-2 rounded-full bg-rose-500 shrink-0" />
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-sm truncate">{{ review.sub_task_name }}</div>
-                                    <div class="text-[11px] text-muted-foreground/60">{{ review.reviewer_agent_name ||
-                                        '—' }} · {{ review.task_name }}</div>
+                                    <p class="text-sm font-medium truncate">{{ item.name }}</p>
+                                    <p class="text-xs text-muted-foreground mt-0.5">{{ item.task_name }}</p>
                                 </div>
-                                <span class="text-amber-500 text-xs shrink-0">{{ '★'.repeat(Math.min(5, review.score))
-                                    }}{{ '☆'.repeat(Math.max(0, 5 - review.score)) }}</span>
-                                <span class="text-[10px] text-muted-foreground/50 shrink-0 tabular-nums">{{
-                                    formatRelativeTime(review.created_at) }}</span>
+                                <Badge variant="outline" class="text-[10px] shrink-0">Заблокирована</Badge>
                             </div>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-8 text-muted-foreground/40">
+                            <Flag class="h-6 w-6 mb-2" />
+                            <p class="text-sm">Нет заблокированных</p>
                         </div>
                     </CardContent>
                 </Card>
-            </template>
-        </div>
+
+                <!-- Ожидающие проверки -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm">Ожидающие проверки</CardTitle>
+                            <Button variant="ghost" size="sm" class="h-7 text-xs"
+                                @click="router.push('/reviews')">
+                                Подробнее
+                                <ArrowRight class="h-3 w-3 ml-1" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="highlights?.pending_review_sub_tasks.length"
+                            class="space-y-2.5">
+                            <div v-for="item in highlights.pending_review_sub_tasks" :key="item.id"
+                                class="flex items-start gap-2.5 rounded-lg border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                @click="router.push(`/reviews?sub_task=${item.id}`)">
+                                <div class="mt-0.5 w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium truncate">{{ item.name }}</p>
+                                    <p class="text-xs text-muted-foreground mt-0.5">{{ item.task_name }}</p>
+                                </div>
+                                <Badge variant="outline" class="text-[10px] shrink-0">На проверке</Badge>
+                            </div>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-8 text-muted-foreground/40">
+                            <Clock class="h-6 w-6 mb-2" />
+                            <p class="text-sm">Нет ожидающих</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Активные агенты -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm">Загруженные агенты</CardTitle>
+                            <Button variant="ghost" size="sm" class="h-7 text-xs"
+                                @click="router.push('/agents')">
+                                Все агенты
+                                <ArrowRight class="h-3 w-3 ml-1" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="highlights?.busy_agents.length" class="space-y-2.5">
+                            <div v-for="agent in highlights.busy_agents" :key="agent.id"
+                                class="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                @click="router.push(`/agents?agent=${agent.id}`)">
+                                <div class="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+                                    <Bot class="h-4 w-4 text-sky-600" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium">{{ agent.name }}</p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ agentRoleMap[agent.role] || agent.role }} ·
+                                        {{ agent.open_sub_task_count }} подзадач
+                                    </p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <p class="text-sm font-bold tabular-nums"
+                                        :class="agent.total_score >= 0 ? 'text-emerald-600' : 'text-rose-500'">
+                                        {{ agent.total_score >= 0 ? '+' : '' }}{{ agent.total_score }}
+                                    </p>
+                                    <p class="text-[10px] text-muted-foreground">баллы</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-8 text-muted-foreground/40">
+                            <Bot class="h-6 w-6 mb-2" />
+                            <p class="text-sm">Нет данных</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Неактивные агенты -->
+                <Card>
+                    <CardHeader class="pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm">Неактивные агенты</CardTitle>
+                            <Button variant="ghost" size="sm" class="h-7 text-xs"
+                                @click="router.push('/agents')">
+                                Все агенты
+                                <ArrowRight class="h-3 w-3 ml-1" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="highlights?.low_activity_agents.length" class="space-y-2.5">
+                            <div v-for="agent in highlights.low_activity_agents" :key="agent.id"
+                                class="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                @click="router.push(`/agents?agent=${agent.id}`)">
+                                <div class="h-8 w-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0">
+                                    <Clock class="h-4 w-4 text-stone-500" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium">{{ agent.name }}</p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ agentRoleMap[agent.role] || agent.role }} ·
+                                        последний запрос {{ formatRelativeTime(agent.last_request_at) }}
+                                    </p>
+                                </div>
+                                <Badge variant="outline" class="text-[10px] shrink-0">
+                                    {{ agentStatusMap[agent.status]?.label || agent.status }}
+                                </Badge>
+                            </div>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-8 text-muted-foreground/40">
+                            <TrendingUp class="h-6 w-6 mb-2" />
+                            <p class="text-sm">Все агенты активны</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Последние рецензии -->
+                <Card class="xl:col-span-2">
+                    <CardHeader class="pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm">Последние рецензии</CardTitle>
+                            <Button variant="ghost" size="sm" class="h-7 text-xs"
+                                @click="router.push('/reviews')">
+                                Все
+                                <ArrowRight class="h-3 w-3 ml-1" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="highlights?.recent_reviews.length" class="space-y-2">
+                            <div v-for="review in highlights.recent_reviews" :key="review.id"
+                                class="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                @click="router.push(`/reviews?sub_task=${review.sub_task_id}`)">
+                                <div class="shrink-0">
+                                    <div class="h-8 w-8 rounded-full flex items-center justify-center"
+                                        :class="review.result === 'approved' ? 'bg-emerald-100' : 'bg-rose-100'">
+                                        <Star v-if="review.result === 'approved'" class="h-4 w-4 text-emerald-600" />
+                                        <AlertCircle v-else class="h-4 w-4 text-rose-600" />
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium truncate">{{ review.sub_task_name }}</p>
+                                    <p class="text-xs text-muted-foreground mt-0.5">{{ review.task_name }}</p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <Badge :variant="review.result === 'approved' ? 'default' : 'destructive'"
+                                        class="text-[10px]">
+                                        {{ reviewResultMap[review.result] || review.result }}
+                                    </Badge>
+                                    <p class="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
+                                        {{ formatRelativeTime(review.created_at) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-8 text-muted-foreground/40">
+                            <BarChart3 class="h-6 w-6 mb-2" />
+                            <p class="text-sm">Нет рецензий</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <p class="text-xs text-muted-foreground/40 text-center">
+                Обновлено: {{ overview.generated_at ? new Date(overview.generated_at).toLocaleString('ru-RU') : '—' }}
+            </p>
+        </template>
     </div>
 </template>
-
-<style scoped>
-/* Sparkline draw-in animation */
-@keyframes sparkline-draw {
-    from {
-        stroke-dashoffset: 500;
-    }
-
-    to {
-        stroke-dashoffset: 0;
-    }
-}
-
-@keyframes sparkline-area-in {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-.sparkline-line {
-    stroke-dasharray: 500;
-    stroke-dashoffset: 500;
-    animation: sparkline-draw 1.2s ease-out 0.8s forwards;
-}
-
-.sparkline-area {
-    opacity: 0;
-    animation: sparkline-area-in 0.6s ease-out 1.4s forwards;
-}
-</style>

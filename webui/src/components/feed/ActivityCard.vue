@@ -19,10 +19,10 @@ const expanded = ref(false)
 const showRaw = ref(false)
 
 const roleMap: Record<string, string> = {
-    planner: '规划者',
-    executor: '执行者',
-    reviewer: '审查者',
-    patrol: '巡查者',
+    planner: 'Планировщик',
+    executor: 'Исполнитель',
+    reviewer: 'Рецензент',
+    patrol: 'Патрульный',
 }
 
 const roleName = computed(() => roleMap[props.activity.agentRole] || props.activity.agentRole)
@@ -38,11 +38,11 @@ const iconMap: Record<string, Component> = {
 }
 
 const detailLabels: Record<string, string> = {
-    comment: '评语', result: '结果', summary: '摘要',
-    score_delta: '分值', reason: '原因', role: '角色',
-    status: '状态', priority: '优先级', type: '类型',
-    task_id: '任务', sub_task_id: '子任务', agent_id: 'Agent',
-    assigned_agent: '执行者', action: '动作',
+    comment: 'Отзыв', result: 'Результат', summary: 'Сводка',
+    score_delta: 'Баллы', reason: 'Причина', role: 'Роль',
+    status: 'Статус', priority: 'Приоритет', type: 'Тип',
+    task_id: 'Задача', sub_task_id: 'Подзадача', agent_id: 'Агент',
+    assigned_agent: 'Исполнитель', action: 'Действие',
 }
 
 function highlightJson(): string {
@@ -76,14 +76,14 @@ function highlightJson(): string {
 <template>
     <div class="flex gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-muted/40"
         :class="{ 'bg-primary/[0.03]': isNew }" @click="expanded = !expanded">
-        <!-- 图标 -->
+        <!-- Иконка -->
         <div class="relative shrink-0 mt-0.5">
             <div class="flex items-center justify-center w-7 h-7 rounded-lg bg-muted text-muted-foreground">
                 <component :is="iconMap[activity.icon] || iconMap.Activity" class="w-3.5 h-3.5" />
             </div>
         </div>
 
-        <!-- 内容 -->
+        <!-- Контент -->
         <div class="flex-1 min-w-0 pb-0.5">
             <div class="flex items-baseline gap-1.5 text-sm flex-wrap leading-5">
                 <TooltipProvider :delay-duration="300">
@@ -106,7 +106,7 @@ function highlightJson(): string {
                     activity.relativeTime }}</span>
             </div>
 
-            <!-- 展开详情 -->
+            <!-- Детали -->
             <Transition name="expand">
                 <div v-if="expanded" class="mt-1.5 space-y-1.5">
                     <div v-if="hasDetails" class="flex flex-wrap gap-x-4 gap-y-0.5">

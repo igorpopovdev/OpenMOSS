@@ -4,92 +4,88 @@ import { useDebounceFn } from '@vueuse/core'
 import {
     adminReviewApi,
     type AdminReviewListItem,
-    type AdminReviewDetail,
     type AdminPageResponse,
 } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import {
-    Search,
-    RefreshCw,
-    Loader2,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet'
+import {
     AlertCircle,
-    ClipboardCheck,
     ArrowLeft,
     ArrowRight,
-    CheckCircle2,
-    XCircle,
+    FileText,
+    Loader2,
+    RefreshCw,
+    Search,
+    Star,
 } from 'lucide-vue-next'
 
-// ─── 状态 ───
-
 const PAGE_SIZE = 20
+
+const loading = ref(false)
+const error = ref('')
 
 const keyword = ref('')
 const resultFilter = ref('all')
 const page = ref(1)
-
-const loading = ref(false)
-const loadingDetail = ref(false)
-const listError = ref('')
-const detailError = ref('')
-
-const selectedReviewId = ref<string | null>(null)
-const selectedReview = ref<AdminReviewDetail | null>(null)
+let requestId = 0
 
 const pageData = ref<AdminPageResponse<AdminReviewListItem>>(createEmptyPage())
-
-let listRequestId = 0
-let detailRequestId = 0
-const detailKey = ref(0)
-
-// ─── 选项 ───
+const selectedReview = ref<AdminReviewListItem | null>(null)
+const detailSheetOpen = ref(false)
+const detailLoading = ref(false)
+const detailError = ref('')
 
 const resultOptions = [
-    { value: 'all', label: '全部结果' },
-    { value: 'approved', label: '✅ 通过' },
-    { value: 'rejected', label: '❌ 驳回' },
+    { value: 'all', label: 'Все' },
+    { value: 'approved', label: 'Одобрено' },
+    { value: 'rejected', label: 'Отклонено' },
+    { value: 'pending', label: 'Ожидает' },
 ]
 
-// ─── 工具函数 ───
+const roleBadgeClass: Record<string, string> = {
+    planner: 'border-violet-200 bg-violet-50 text-violet-700',
+    executor: 'border-sky-200 bg-sky-50 text-sky-700',
+    reviewer: 'border-amber-200 bg-amber-50 text-amber-700',
+    patrol: 'border-teal-200 bg-teal-50 text-teal-700',
+}
 
-function createEmptyPage<T = unknown>(): AdminPageResponse<T> {
-    return { items: [] as T[], total: 0, page: 1, page_size: PAGE_SIZE, total_pages: 1, has_more: false }
+function formatRole(role: string) {
+    return ({ planner: 'Планировщик', executor: 'Исполнитель', reviewer: 'Рецензент', patrol: 'Патрульный' }[role] ?? role)
 }
 
 function formatDate(value: string | null) {
     if (!value) return '—'
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return '—'
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat('ru-RU', {
         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
     }).format(date)
 }
 
-function formatRelativeTime(value: string | null) {
-    if (!value) return ''
-    const now = Date.now()
-    const time = new Date(value).getTime()
-    if (Number.isNaN(time)) return ''
-    const diff = Math.floor((now - time) / 1000)
-    if (diff < 60) return '刚刚'
-    if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
-    if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
-    return `${Math.floor(diff / 86400)} 天前`
+function formatResult(result: string) {
+    return ({ approved: 'Одобрено', rejected: 'Отклонено', pending: 'Ожидает' }[result] ?? result)
 }
 
-function scoreStars(score: number) {
-    return '★'.repeat(Math.max(0, Math.min(5, score))) + '☆'.repeat(Math.max(0, 5 - score))
+function getResultBadgeClass(result: string) {
+    return ({
+        approved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        rejected: 'border-rose-200 bg-rose-50 text-rose-700',
+        pending: 'border-amber-200 bg-amber-50 text-amber-700',
+    }[result] ?? 'border-border bg-muted text-muted-foreground')
 }
-
-// ─── 数据加载 ───
 
 const reloadDebounced = useDebounceFn(() => {
     page.value = 1
-    void loadList()
+    void loadData()
 }, 280)
 
 watch([keyword, resultFilter], () => {
@@ -98,13 +94,17 @@ watch([keyword, resultFilter], () => {
 })
 
 onMounted(() => {
-    void loadList()
+    void loadData()
 })
 
-async function loadList() {
-    const rid = ++listRequestId
+function createEmptyPage<T>(): AdminPageResponse<T> {
+    return { items: [] as T[], total: 0, page: 1, page_size: PAGE_SIZE, total_pages: 1, has_more: false }
+}
+
+async function loadData() {
+    const rid = ++requestId
     loading.value = true
-    listError.value = ''
+    error.value = ''
 
     try {
         const response = await adminReviewApi.list({
@@ -114,324 +114,219 @@ async function loadList() {
             result: resultFilter.value === 'all' ? undefined : resultFilter.value,
             sort_order: 'desc',
         })
-        if (rid !== listRequestId) return
+        if (rid !== requestId) return
         pageData.value = response.data
-
-        const firstItem = response.data.items[0]
-        if (!firstItem) {
-            selectedReviewId.value = null
-            selectedReview.value = null
-            return
-        }
-        const currentIds = new Set(response.data.items.map(i => i.id))
-        const nextId =
-            selectedReviewId.value && currentIds.has(selectedReviewId.value)
-                ? selectedReviewId.value
-                : firstItem.id
-        if (nextId !== selectedReviewId.value) {
-            selectedReviewId.value = nextId
-            void loadDetail(nextId)
-        }
     } catch (e) {
-        if (rid !== listRequestId) return
+        if (rid !== requestId) return
         console.error('Failed to load reviews', e)
-        listError.value = '审查记录加载失败，请重试。'
+        error.value = 'Ошибка загрузки данных. Попробуйте ещё раз.'
     } finally {
-        if (rid === listRequestId) loading.value = false
+        if (rid === requestId) loading.value = false
     }
 }
 
-async function loadDetail(reviewId: string) {
-    const rid = ++detailRequestId
-    loadingDetail.value = true
+async function openReviewDetail(review: AdminReviewListItem) {
+    selectedReview.value = review
+    detailSheetOpen.value = true
+    detailLoading.value = true
     detailError.value = ''
-
     try {
-        const response = await adminReviewApi.get(reviewId)
-        if (rid !== detailRequestId || selectedReviewId.value !== reviewId) return
+        const response = await adminReviewApi.get(review.id)
         selectedReview.value = response.data
-        detailKey.value++
     } catch (e) {
-        if (rid !== detailRequestId) return
         console.error('Failed to load review detail', e)
-        detailError.value = '详情加载失败，请重试。'
-        selectedReview.value = null
+        detailError.value = 'Не удалось загрузить детали рецензии.'
     } finally {
-        if (rid === detailRequestId) loadingDetail.value = false
+        detailLoading.value = false
     }
-}
-
-function selectReview(id: string) {
-    if (selectedReviewId.value === id) return
-    selectedReviewId.value = id
-    void loadDetail(id)
 }
 
 function goToPage(p: number) {
     if (p < 1 || p > pageData.value.total_pages || p === page.value) return
     page.value = p
-    void loadList()
+    loadData()
 }
 </script>
 
 <template>
-    <TooltipProvider>
-        <div class="flex flex-col h-[calc(100vh-3.5rem)]">
-            <!-- ─── 顶栏 ─── -->
-            <header class="shrink-0 border-b border-border/40 bg-background px-4 py-3 space-y-2.5">
-                <div class="flex items-center gap-3">
-                    <div class="relative flex-1 max-w-sm">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="keyword" class="h-9 bg-muted/30 pl-10 text-sm" placeholder="搜索任务名、子任务名、审查意见…" />
-                    </div>
+    <div class="flex flex-col h-[calc(100vh-3.5rem)]">
+        <!-- Заголовок -->
+        <header class="shrink-0 border-b border-border/40 bg-background px-4 py-3 space-y-3">
+            <div class="flex items-center gap-3">
+                <div class="relative flex-1 max-w-sm">
+                    <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input v-model="keyword" class="h-9 bg-muted/30 pl-10 text-sm" placeholder="Поиск по причине…" />
+                </div>
+                <Badge variant="secondary" class="h-7 px-2.5 text-xs tabular-nums shrink-0">
+                    {{ pageData.total }} записей
+                </Badge>
+                <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" :disabled="loading" @click="loadData">
+                    <RefreshCw class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
+                </Button>
+            </div>
 
-                    <Badge variant="secondary" class="h-7 px-2.5 text-xs tabular-nums shrink-0">
-                        {{ pageData.total }} 条
-                    </Badge>
+            <div class="flex items-center gap-1.5">
+                <Button v-for="opt in resultOptions" :key="opt.value" size="sm"
+                    :variant="resultFilter === opt.value ? 'default' : 'ghost'"
+                    class="h-7 rounded-full px-3 text-xs" @click="resultFilter = opt.value">
+                    {{ opt.label }}
+                </Button>
+            </div>
+        </header>
 
-                    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" :disabled="loading" @click="loadList">
-                        <RefreshCw class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
+        <!-- Контент -->
+        <div class="flex-1 min-h-0 overflow-y-auto">
+            <!-- Ошибка -->
+            <div v-if="error" class="flex flex-col items-center justify-center py-16">
+                <AlertCircle class="h-5 w-5 text-muted-foreground" />
+                <p class="mt-2 text-sm">{{ error }}</p>
+                <Button class="mt-3" size="sm" @click="loadData">Перезагрузить</Button>
+            </div>
+
+            <!-- Загрузка -->
+            <div v-else-if="loading" class="flex items-center justify-center py-16">
+                <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+
+            <!-- Список -->
+            <template v-else-if="pageData.items.length">
+                <div class="divide-y divide-border/30">
+                    <button v-for="(review, idx) in pageData.items" :key="review.id" type="button"
+                        class="w-full px-5 py-3.5 text-left transition-colors hover:bg-muted/30 animate-slide-up"
+                        :style="{ animationDelay: `${idx * 25}ms` }"
+                        @click="openReviewDetail(review)">
+                        <div class="flex items-start gap-3">
+                            <div class="shrink-0 mt-1">
+                                <div class="h-8 w-8 rounded-full flex items-center justify-center"
+                                    :class="review.result === 'approved' ? 'bg-emerald-100' : review.result === 'rejected' ? 'bg-rose-100' : 'bg-amber-100'">
+                                    <Star v-if="review.result === 'approved'" class="h-4 w-4 text-emerald-600" />
+                                    <AlertCircle v-else-if="review.result === 'rejected'" class="h-4 w-4 text-rose-600" />
+                                    <Loader2 v-else class="h-4 w-4 text-amber-600" />
+                                </div>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-sm font-semibold">{{ review.sub_task_name }}</span>
+                                    <Badge variant="outline" :class="getResultBadgeClass(review.result)" class="text-[10px] shrink-0">
+                                        {{ formatResult(review.result) }}
+                                    </Badge>
+                                    <span class="text-[10px] text-muted-foreground">· {{ review.task_name }}</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    {{ review.issues || review.comment || 'Без комментария' }}
+                                </p>
+                                <div class="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground/50">
+                                    <span>{{ review.reviewer_agent_name || review.reviewer_agent }}</span>
+                                    <span v-if="review.rework_agent_name">→ {{ review.rework_agent_name }}</span>
+                                    <span class="ml-auto tabular-nums">{{ formatDate(review.created_at) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Пагинация -->
+                <div v-if="pageData.total_pages > 1"
+                    class="flex items-center justify-center gap-2 py-3 border-t border-border/30 text-xs text-muted-foreground">
+                    <Button variant="ghost" size="icon" class="h-7 w-7" :disabled="page <= 1 || loading"
+                        @click="goToPage(page - 1)">
+                        <ArrowLeft class="h-3 w-3" />
+                    </Button>
+                    <span class="tabular-nums">{{ page }} / {{ pageData.total_pages }}</span>
+                    <Button variant="ghost" size="icon" class="h-7 w-7"
+                        :disabled="page >= pageData.total_pages || loading" @click="goToPage(page + 1)">
+                        <ArrowRight class="h-3 w-3" />
                     </Button>
                 </div>
+            </template>
 
-                <!-- 结果筛选 -->
-                <div class="flex items-center gap-1.5">
-                    <Button v-for="option in resultOptions" :key="option.value" size="sm"
-                        :variant="resultFilter === option.value ? 'default' : 'ghost'"
-                        class="h-7 rounded-full px-3 text-xs" @click="resultFilter = option.value">
-                        {{ option.label }}
-                    </Button>
-                </div>
-            </header>
-
-            <!-- ─── 主内容：左右分栏 ─── -->
-            <div class="flex flex-1 min-h-0">
-                <!-- 左栏：列表 -->
-                <div class="w-[380px] shrink-0 border-r border-border/30 flex flex-col">
-                    <!-- 列表错误 -->
-                    <div v-if="listError" class="flex flex-col items-center justify-center flex-1">
-                        <AlertCircle class="h-5 w-5 text-muted-foreground" />
-                        <p class="mt-2 text-sm">{{ listError }}</p>
-                        <Button class="mt-3" size="sm" @click="loadList">重新加载</Button>
-                    </div>
-
-                    <!-- 加载中 -->
-                    <div v-else-if="loading" class="flex items-center justify-center flex-1">
-                        <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-
-                    <!-- 列表 -->
-                    <template v-else>
-                        <div class="flex-1 overflow-y-auto">
-                            <div v-if="pageData.items.length" class="divide-y divide-border/20">
-                                <button v-for="(review, idx) in pageData.items" :key="review.id" type="button"
-                                    class="w-full text-left px-4 py-3 hover:bg-muted/30 transition-all cursor-pointer animate-slide-up"
-                                    :class="selectedReviewId === review.id ? 'bg-muted/40 border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'"
-                                    :style="{ animationDelay: `${idx * 25}ms` }" @click="selectReview(review.id)">
-                                    <!-- 第一行：结果 + 子任务名 + 时间 -->
-                                    <div class="flex items-center gap-1.5">
-                                        <CheckCircle2 v-if="review.result === 'approved'"
-                                            class="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                        <XCircle v-else class="h-3.5 w-3.5 text-rose-500 shrink-0" />
-                                        <span class="text-sm font-medium truncate flex-1">{{
-                                            review.sub_task_name }}</span>
-                                        <span class="text-[10px] text-muted-foreground/50 shrink-0 tabular-nums">
-                                            {{ formatRelativeTime(review.created_at) }}
-                                        </span>
-                                    </div>
-                                    <!-- 第二行：评分 + reviewer + 轮次 -->
-                                    <div class="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-                                        <span class="text-amber-500">{{ scoreStars(review.score) }}</span>
-                                        <span>{{ review.reviewer_agent_name || '未知' }}</span>
-                                        <span>第{{ review.round }}轮</span>
-                                    </div>
-                                    <!-- 第三行：任务名 -->
-                                    <div class="mt-0.5 text-[11px] text-muted-foreground/50 truncate">
-                                        {{ review.task_name }}
-                                    </div>
-                                </button>
-                            </div>
-                            <div v-else
-                                class="flex flex-col items-center justify-center flex-1 py-16 text-muted-foreground/40">
-                                <ClipboardCheck class="h-6 w-6 mb-2" />
-                                <p class="text-sm">暂无审查记录</p>
-                            </div>
-                        </div>
-
-                        <!-- 分页 -->
-                        <div v-if="pageData.total_pages > 1"
-                            class="flex items-center justify-center gap-2 py-2 border-t border-border/30 text-xs text-muted-foreground shrink-0">
-                            <Button variant="ghost" size="icon" class="h-7 w-7"
-                                :disabled="pageData.page <= 1 || loading" @click="goToPage(pageData.page - 1)">
-                                <ArrowLeft class="h-3 w-3" />
-                            </Button>
-                            <span class="tabular-nums">{{ pageData.page }} / {{ pageData.total_pages }}</span>
-                            <Button variant="ghost" size="icon" class="h-7 w-7"
-                                :disabled="pageData.page >= pageData.total_pages || loading"
-                                @click="goToPage(pageData.page + 1)">
-                                <ArrowRight class="h-3 w-3" />
-                            </Button>
-                        </div>
-                    </template>
-                </div>
-
-                <!-- 右栏：详情 -->
-                <div class="flex-1 min-w-0 overflow-y-auto relative">
-                    <!-- 加载中 -->
-                    <div v-if="loadingDetail" class="flex items-center justify-center h-full">
-                        <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-
-                    <!-- 错误 -->
-                    <div v-else-if="detailError" class="flex flex-col items-center justify-center h-full">
-                        <AlertCircle class="h-5 w-5 text-muted-foreground" />
-                        <p class="mt-2 text-sm">{{ detailError }}</p>
-                    </div>
-
-                    <!-- 详情内容 -->
-                    <div v-else-if="selectedReview" :key="detailKey"
-                        class="p-5 space-y-5 max-w-2xl mx-auto animate-slide-up">
-                        <!-- 头部 -->
-                        <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <Badge v-if="selectedReview.result === 'approved'"
-                                    class="bg-emerald-100 text-emerald-700 border-emerald-200">
-                                    <CheckCircle2 class="h-3 w-3 mr-1" /> 审查通过
-                                </Badge>
-                                <Badge v-else class="bg-rose-100 text-rose-700 border-rose-200">
-                                    <XCircle class="h-3 w-3 mr-1" /> 审查驳回
-                                </Badge>
-                                <Badge variant="outline" class="text-[10px]">第{{ selectedReview.round }}轮</Badge>
-                            </div>
-                            <h2 class="text-lg font-semibold">{{ selectedReview.sub_task_name }}</h2>
-                            <p class="text-sm text-muted-foreground mt-0.5">{{ selectedReview.task_name }}</p>
-                        </div>
-
-                        <Separator />
-
-                        <!-- 评分 -->
-                        <div>
-                            <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-2">
-                                评分
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl text-amber-500 tracking-wider">{{
-                                    scoreStars(selectedReview.score) }}</span>
-                                <span class="text-lg font-bold tabular-nums">{{ selectedReview.score }}/5</span>
-                            </div>
-                        </div>
-
-                        <!-- 审查意见 -->
-                        <div v-if="selectedReview.comment">
-                            <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-2">
-                                审查意见
-                            </div>
-                            <div
-                                class="rounded-lg border border-border/50 bg-muted/20 p-3 text-sm leading-relaxed whitespace-pre-wrap">
-                                {{ selectedReview.comment }}
-                            </div>
-                        </div>
-
-                        <!-- 问题 -->
-                        <div v-if="selectedReview.issues">
-                            <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-2">
-                                发现问题
-                            </div>
-                            <div
-                                class="rounded-lg border border-rose-200/50 bg-rose-50/30 p-3 text-sm leading-relaxed whitespace-pre-wrap">
-                                {{ selectedReview.issues }}
-                            </div>
-                        </div>
-
-                        <Separator />
-
-                        <!-- 子任务信息 -->
-                        <div>
-                            <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-2">
-                                子任务信息
-                            </div>
-                            <div class="space-y-2">
-                                <div v-if="selectedReview.sub_task_description"
-                                    class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60 mb-1">描述</div>
-                                    <p class="text-sm">{{ selectedReview.sub_task_description }}</p>
-                                </div>
-                                <div v-if="selectedReview.sub_task_deliverable"
-                                    class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60 mb-1">交付物要求</div>
-                                    <p class="text-sm">{{ selectedReview.sub_task_deliverable }}</p>
-                                </div>
-                                <div v-if="selectedReview.sub_task_acceptance"
-                                    class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60 mb-1">验收标准</div>
-                                    <p class="text-sm">{{ selectedReview.sub_task_acceptance }}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <Separator />
-
-                        <!-- 关联信息 -->
-                        <div>
-                            <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-2">
-                                关联信息
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60">审查 Agent</div>
-                                    <div class="mt-1 text-sm font-medium">{{ selectedReview.reviewer_agent_name ||
-                                        '—' }}</div>
-                                </div>
-                                <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60">返工指派</div>
-                                    <div class="mt-1 text-sm font-medium">{{ selectedReview.rework_agent_name ||
-                                        '—' }}</div>
-                                </div>
-                                <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60">审查时间</div>
-                                    <div class="mt-1 text-sm font-medium">{{ formatDate(selectedReview.created_at) }}
-                                    </div>
-                                </div>
-                                <div v-if="selectedReview.module_name"
-                                    class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                    <div class="text-[11px] text-muted-foreground/60">所属模块</div>
-                                    <div class="mt-1 text-sm font-medium">{{ selectedReview.module_name }}</div>
-                                </div>
-                            </div>
-                            <div class="flex gap-4 text-[11px] text-muted-foreground/60 pt-2">
-                                <span>审查 ID: {{ selectedReview.id }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 未选择 -->
-                    <div v-if="!loadingDetail && !detailError && !selectedReview"
-                        class="flex flex-col items-center justify-center flex-1 h-full text-muted-foreground/40">
-                        <ClipboardCheck class="h-8 w-8 mb-3" />
-                        <p class="text-sm font-medium text-muted-foreground/60">点击左侧审查记录查看详情</p>
-                        <p class="text-xs mt-1">评分、审查意见和子任务信息会在这里展示</p>
-                    </div>
-                </div>
+            <!-- Пусто -->
+            <div v-else class="flex flex-col items-center justify-center py-16 text-muted-foreground/40">
+                <FileText class="h-6 w-6 mb-2" />
+                <p class="text-sm">Рецензии не найдены</p>
             </div>
         </div>
-    </TooltipProvider>
+    </div>
+
+    <!-- Панель деталей -->
+    <Sheet v-model:open="detailSheetOpen">
+        <SheetContent side="right" class="w-full sm:max-w-xl p-0">
+            <SheetHeader class="shrink-0 px-6 pt-6 pb-4 border-b border-border/30">
+                <SheetTitle>Детали рецензии</SheetTitle>
+                <SheetDescription>Просмотр результата, замечаний и контекста подзадачи</SheetDescription>
+            </SheetHeader>
+
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                <div v-if="detailLoading" class="flex items-center justify-center py-12">
+                    <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+
+                <div v-else-if="detailError" class="text-center text-sm text-muted-foreground">
+                    {{ detailError }}
+                </div>
+
+                <template v-else-if="selectedReview">
+                    <div class="flex items-center gap-2">
+                        <Badge variant="outline" :class="getResultBadgeClass(selectedReview.result)">
+                            {{ formatResult(selectedReview.result) }}
+                        </Badge>
+                        <Badge variant="secondary">Раунд {{ selectedReview.round }}</Badge>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Подзадача</p>
+                            <p class="text-sm font-medium mt-1">{{ selectedReview.sub_task_name }}</p>
+                            <p class="text-xs text-muted-foreground">{{ selectedReview.task_name }}</p>
+                        </div>
+
+                        <div v-if="selectedReview.issues">
+                            <p class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Замечания</p>
+                            <p class="text-sm mt-1 whitespace-pre-wrap">{{ selectedReview.issues }}</p>
+                        </div>
+
+                        <div v-if="selectedReview.comment">
+                            <p class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Комментарий</p>
+                            <p class="text-sm mt-1 whitespace-pre-wrap">{{ selectedReview.comment }}</p>
+                        </div>
+
+                        <Separator />
+
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-[11px] text-muted-foreground/60">Рецензент</p>
+                                <p class="font-medium mt-0.5">{{ selectedReview.reviewer_agent_name || '—' }}</p>
+                            </div>
+                            <div v-if="selectedReview.rework_agent_name">
+                                <p class="text-[11px] text-muted-foreground/60">Доработку ведёт</p>
+                                <p class="font-medium mt-0.5">{{ selectedReview.rework_agent_name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[11px] text-muted-foreground/60">Балл</p>
+                                <p class="font-medium mt-0.5">{{ selectedReview.score || 0 }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[11px] text-muted-foreground/60">Дата</p>
+                                <p class="font-medium mt-0.5">{{ formatDate(selectedReview.created_at) }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedReview.sub_task_description">
+                            <p class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Описание подзадачи</p>
+                            <p class="text-sm mt-1 whitespace-pre-wrap">{{ selectedReview.sub_task_description }}</p>
+                        </div>
+                        <div v-if="selectedReview.sub_task_deliverable">
+                            <p class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Результат</p>
+                            <p class="text-sm mt-1 whitespace-pre-wrap">{{ selectedReview.sub_task_deliverable }}</p>
+                        </div>
+                        <div v-if="selectedReview.sub_task_acceptance">
+                            <p class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Критерии приёмки</p>
+                            <p class="text-sm mt-1 whitespace-pre-wrap">{{ selectedReview.sub_task_acceptance }}</p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </SheetContent>
+    </Sheet>
 </template>
-
-<style scoped>
-@keyframes slide-up-fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-slide-up {
-    animation: slide-up-fade-in 0.35s ease-out both;
-}
-</style>

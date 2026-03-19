@@ -19,7 +19,7 @@ const roleLabels: Record<string, string> = {
 }
 
 const roleFullName: Record<string, string> = {
-    planner: '规划者', executor: '执行者', reviewer: '审查者', patrol: '巡查者',
+    planner: 'Планировщик', executor: 'Исполнитель', reviewer: 'Рецензент', patrol: 'Патрульный',
 }
 
 const categoryColors: Record<string, string> = {
@@ -46,7 +46,7 @@ const actions = computed(() =>
             selected ? 'border-primary/60 ring-1 ring-primary/20 bg-accent/30' : 'border-border/60 hover:border-border',
             flashing ? 'agent-card-flash' : '',
         ]" @click="$emit('select')">
-        <!-- 头部 -->
+        <!-- Заголовок -->
         <div class="flex items-center gap-2.5">
             <div
                 class="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs font-bold text-foreground/70 shrink-0">
@@ -65,20 +65,20 @@ const actions = computed(() =>
 
         <Separator class="my-2.5 opacity-40" />
 
-        <!-- 今日统计 -->
+        <!-- Сегодня -->
         <div class="space-y-1">
-            <div class="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">今日</div>
+            <div class="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">Сегодня</div>
             <div class="flex gap-4 text-xs tabular-nums">
                 <span><span class="font-semibold text-foreground">{{ agent.today_request_count }}</span> <span
-                        class="text-muted-foreground">请求</span></span>
+                        class="text-muted-foreground">Запросов</span></span>
                 <span><span class="font-semibold text-foreground">{{ agent.today_submit_count }}</span> <span
-                        class="text-muted-foreground">提交</span></span>
+                        class="text-muted-foreground">Сабмитов</span></span>
                 <span><span class="font-semibold text-foreground">{{ agent.today_review_count }}</span> <span
-                        class="text-muted-foreground">审查</span></span>
+                        class="text-muted-foreground">Рецензий</span></span>
             </div>
         </div>
 
-        <!-- 当前任务 -->
+        <!-- Текущая задача -->
         <div class="mt-3">
             <div v-if="agent.current_sub_task" class="text-xs">
                 <div class="flex items-center gap-1.5">
@@ -90,12 +90,12 @@ const actions = computed(() =>
                     {{ agent.current_sub_task.module_name }}
                 </div>
             </div>
-            <div v-else class="text-xs text-muted-foreground/50 italic">空闲</div>
+            <div v-else class="text-xs text-muted-foreground/50 italic">Свободен</div>
         </div>
 
-        <!-- 近期动作 -->
+        <!-- Недавние действия -->
         <div v-if="actions.length" class="mt-3 space-y-1">
-            <div class="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">近期</div>
+            <div class="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">Недавнее</div>
             <div v-for="(act, i) in actions" :key="i" class="flex items-center gap-1.5 text-[11px] leading-4">
                 <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0" :class="categoryColors[act.category]" />
                 <span class="text-foreground/80 truncate flex-1">{{ act.verb }}</span>

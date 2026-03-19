@@ -1,47 +1,47 @@
-# webui
+# WebUI для OpenMOSS
 
-This template should help get you started developing with Vue 3 in Vite.
+Шаблон для разработки Vue 3 + Vite.
 
-## Recommended IDE Setup
+## Рекомендуемая настройка IDE
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (отключите Vetur).
 
-## Recommended Browser Setup
+## Рекомендуемая настройка браузера
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
+- Chromium-based браузеры (Chrome, Edge, Brave и т.д.):
   - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
+  - [Включите Custom Object Formatter в DevTools](http://bit.ly/object-formatters)
 - Firefox:
   - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+  - [Custom Object Formatter](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## Type Support for `.vue` Imports in TS
+## TypeScript для `.vue` импортов
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+TypeScript не понимает типы `.vue` файлов по умолчанию, поэтому используем `vue-tsc` вместо `tsc` для проверки типов. В редакторах нужен [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
 
-## Customize configuration
+## Настройка
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+См. [Vite Configuration Reference](https://vite.dev/config/).
 
-## Project Setup
+## Установка проекта
 
 ```sh
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+### Компиляция и горячая перезагрузка для разработки
 
 ```sh
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+### Проверка типов, компиляция и минификация для продакшена
 
 ```sh
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+### Линтинг с [ESLint](https://eslint.org/)
 
 ```sh
 npm run lint

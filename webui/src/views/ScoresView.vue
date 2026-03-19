@@ -27,12 +27,10 @@ import {
 } from 'lucide-vue-next'
 
 // ─── Tab ───
-
 type TabType = 'leaderboard' | 'logs'
 const activeTab = ref<TabType>('leaderboard')
 
-// ─── 状态 ───
-
+// ─── Состояние ───
 const PAGE_SIZE = 20
 
 const loading = ref(false)
@@ -49,30 +47,28 @@ const summary = ref<AdminScoreSummary | null>(null)
 const leaderboardData = ref<AdminPageResponse<AdminScoreLeaderboardItem>>(createEmptyPage())
 const logsData = ref<AdminPageResponse<AdminScoreLogItem>>(createEmptyPage())
 
-// ─── 选项 ───
-
+// ─── Опции ───
 const roleOptions = [
-    { value: 'all', label: '全部角色' },
-    { value: 'planner', label: '规划者' },
-    { value: 'executor', label: '执行者' },
-    { value: 'reviewer', label: '审查者' },
-    { value: 'patrol', label: '巡查者' },
+    { value: 'all', label: 'Все роли' },
+    { value: 'planner', label: 'Планировщик' },
+    { value: 'executor', label: 'Исполнитель' },
+    { value: 'reviewer', label: 'Рецензент' },
+    { value: 'patrol', label: 'Патрульный' },
 ]
 
 const signOptions = [
-    { value: 'all', label: '全部' },
-    { value: 'positive', label: '奖励' },
-    { value: 'negative', label: '惩罚' },
+    { value: 'all', label: 'Все' },
+    { value: 'positive', label: 'Награды' },
+    { value: 'negative', label: 'Штрафы' },
 ]
 
-// ─── 工具函数 ───
-
+// ─── Вспомогательные функции ───
 function createEmptyPage<T = unknown>(): AdminPageResponse<T> {
     return { items: [] as T[], total: 0, page: 1, page_size: PAGE_SIZE, total_pages: 1, has_more: false }
 }
 
 function formatRole(role: string) {
-    return ({ planner: '规划者', executor: '执行者', reviewer: '审查者', patrol: '巡查者' }[role] ?? role)
+    return ({ planner: 'Планировщик', executor: 'Исполнитель', reviewer: 'Рецензент', patrol: 'Патрульный' }[role] ?? role)
 }
 
 function getRoleBadgeClass(role: string) {
@@ -88,7 +84,7 @@ function formatDate(value: string | null) {
     if (!value) return '—'
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return '—'
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat('ru-RU', {
         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
     }).format(date)
 }
@@ -100,8 +96,7 @@ function rankEmoji(rank: number) {
     return `#${rank}`
 }
 
-// ─── 数据加载 ───
-
+// ─── Загрузка данных ───
 const reloadDebounced = useDebounceFn(() => {
     page.value = 1
     void loadData()
@@ -168,7 +163,7 @@ async function loadData() {
     } catch (e) {
         if (rid !== requestId) return
         console.error('Failed to load score data', e)
-        error.value = '数据加载失败，请重试。'
+        error.value = 'Ошибка загрузки данных. Попробуйте ещё раз.'
     } finally {
         if (rid === requestId) loading.value = false
     }
@@ -186,7 +181,6 @@ function refreshAll() {
     void loadData()
 }
 
-// 当前分页数据（供模板统一引用）
 function currentPageData() {
     return activeTab.value === 'leaderboard' ? leaderboardData.value : logsData.value
 }
@@ -194,17 +188,17 @@ function currentPageData() {
 
 <template>
     <div class="flex flex-col h-[calc(100vh-3.5rem)]">
-        <!-- ─── 概览卡片 ─── -->
+        <!-- ─── Панель ─── -->
         <header class="shrink-0 border-b border-border/40 bg-background px-4 py-4 space-y-4">
-            <!-- 概览统计 -->
+            <!-- Обзор -->
             <div v-if="summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-slide-up">
                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3 text-center">
                     <div class="text-2xl font-bold tabular-nums text-primary">{{ summary.top_score }}</div>
-                    <div class="text-[11px] text-muted-foreground mt-0.5">最高积分</div>
+                    <div class="text-[11px] text-muted-foreground mt-0.5">Макс. баллы</div>
                 </div>
                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3 text-center">
                     <div class="text-2xl font-bold tabular-nums">{{ summary.average_score.toFixed(1) }}</div>
-                    <div class="text-[11px] text-muted-foreground mt-0.5">平均积分</div>
+                    <div class="text-[11px] text-muted-foreground mt-0.5">Средний балл</div>
                 </div>
                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3 text-center">
                     <div class="flex justify-center gap-3 text-sm tabular-nums">
@@ -214,50 +208,48 @@ function currentPageData() {
                         <span class="text-muted-foreground">/</span>
                         <span class="text-rose-500 font-semibold">{{ summary.negative_score_agents }}</span>
                     </div>
-                    <div class="text-[11px] text-muted-foreground mt-0.5">正分 / 零分 / 负分</div>
+                    <div class="text-[11px] text-muted-foreground mt-0.5"> полож. / нуль / отриц.</div>
                 </div>
                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3 text-center">
                     <div class="text-2xl font-bold tabular-nums">{{ summary.total_agents }}</div>
-                    <div class="text-[11px] text-muted-foreground mt-0.5">Agent 总数</div>
+                    <div class="text-[11px] text-muted-foreground mt-0.5">Всего агентов</div>
                 </div>
             </div>
 
-            <!-- 搜索 + Tab 切换 + 筛选 -->
+            <!-- Поиск + Tab + фильтры -->
             <div class="space-y-2.5">
                 <div class="flex items-center gap-3">
-                    <!-- Tab 切换 -->
+                    <!-- Tab -->
                     <div class="flex gap-1 rounded-lg bg-muted/40 p-0.5">
                         <Button size="sm" :variant="activeTab === 'leaderboard' ? 'default' : 'ghost'"
                             class="h-7 rounded-md px-3 text-xs" @click="activeTab = 'leaderboard'">
                             <Trophy class="h-3 w-3 mr-1" />
-                            排行榜
+                            Рейтинг
                         </Button>
                         <Button size="sm" :variant="activeTab === 'logs' ? 'default' : 'ghost'"
                             class="h-7 rounded-md px-3 text-xs" @click="activeTab = 'logs'">
-                            积分流水
+                            История баллов
                         </Button>
                     </div>
 
                     <Separator orientation="vertical" class="h-4" />
 
                     <div class="relative flex-1 max-w-sm">
-                        <Search
-                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input v-model="keyword" class="h-9 bg-muted/30 pl-10 text-sm"
-                            :placeholder="activeTab === 'leaderboard' ? '搜索 Agent 名称…' : '搜索原因…'" />
+                            :placeholder="activeTab === 'leaderboard' ? 'Поиск по имени агента…' : 'Поиск по причине…'" />
                     </div>
 
                     <Badge variant="secondary" class="h-7 px-2.5 text-xs tabular-nums shrink-0">
-                        {{ currentPageData().total }} 条
+                        {{ currentPageData().total }} записей
                     </Badge>
 
-                    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" :disabled="loading"
-                        @click="refreshAll">
+                    <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" :disabled="loading" @click="refreshAll">
                         <RefreshCw class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
                     </Button>
                 </div>
 
-                <!-- 筛选行 -->
+                <!-- Фильтры -->
                 <div class="flex items-center gap-1.5">
                     <template v-if="activeTab === 'leaderboard'">
                         <Button v-for="option in roleOptions" :key="option.value" size="sm"
@@ -277,21 +269,21 @@ function currentPageData() {
             </div>
         </header>
 
-        <!-- ─── 主内容 ─── -->
+        <!-- ─── Контент ─── -->
         <div class="flex-1 min-h-0 overflow-y-auto">
-            <!-- 错误 -->
+            <!-- Ошибка -->
             <div v-if="error" class="flex flex-col items-center justify-center py-16">
                 <AlertCircle class="h-5 w-5 text-muted-foreground" />
                 <p class="mt-2 text-sm">{{ error }}</p>
-                <Button class="mt-3" size="sm" @click="loadData">重新加载</Button>
+                <Button class="mt-3" size="sm" @click="loadData">Перезагрузить</Button>
             </div>
 
-            <!-- 加载中 -->
+            <!-- Загрузка -->
             <div v-else-if="loading" class="flex items-center justify-center py-16">
                 <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
 
-            <!-- ═══ 排行榜 ═══ -->
+            <!-- ═══ Рейтинг ═══ -->
             <template v-else-if="activeTab === 'leaderboard'">
                 <div v-if="leaderboardData.items.length" class="divide-y divide-border/30">
                     <div v-for="(item, idx) in leaderboardData.items" :key="item.agent_id"
@@ -302,7 +294,6 @@ function currentPageData() {
                             'bg-gradient-to-r from-orange-50/60 to-transparent dark:from-orange-950/15': item.rank === 3,
                         }"
                         :style="{ animationDelay: `${idx * 30}ms` }">
-                        <!-- 排名 -->
                         <div class="w-10 text-center shrink-0">
                             <span class="text-lg font-bold"
                                 :class="item.rank <= 3 ? 'text-primary' : 'text-muted-foreground/50'">
@@ -310,48 +301,42 @@ function currentPageData() {
                             </span>
                         </div>
 
-                        <!-- 名称 + 角色 -->
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-semibold truncate">{{ item.agent_name }}</span>
-                                <Badge variant="outline" :class="getRoleBadgeClass(item.role)"
-                                    class="text-[10px] px-1.5 shrink-0">
+                                <Badge variant="outline" :class="getRoleBadgeClass(item.role)" class="text-[10px] px-1.5 shrink-0">
                                     {{ formatRole(item.role) }}
                                 </Badge>
                             </div>
                             <div class="flex gap-3 mt-0.5 text-[11px] text-muted-foreground tabular-nums">
-                                <span>奖励 <span class="text-emerald-600 font-medium">{{ item.reward_count
-                                }}</span></span>
-                                <span>惩罚 <span class="text-rose-500 font-medium">{{ item.penalty_count
-                                }}</span></span>
-                                <span>共 {{ item.total_records }} 条</span>
-                                <span v-if="item.last_score_at">最近 {{ formatDate(item.last_score_at) }}</span>
+                                <span>Награды <span class="text-emerald-600 font-medium">{{ item.reward_count }}</span></span>
+                                <span>Штрафы <span class="text-rose-500 font-medium">{{ item.penalty_count }}</span></span>
+                                <span>Всего {{ item.total_records }} записей</span>
+                                <span v-if="item.last_score_at">Последнее {{ formatDate(item.last_score_at) }}</span>
                             </div>
                         </div>
 
-                        <!-- 积分 -->
                         <div class="text-right shrink-0">
                             <div class="text-lg font-bold tabular-nums transition-transform duration-150 group-hover:scale-110 origin-right"
                                 :class="item.total_score > 0 ? 'text-emerald-600' : item.total_score < 0 ? 'text-rose-500' : 'text-muted-foreground'">
                                 {{ item.total_score > 0 ? '+' : '' }}{{ item.total_score }}
                             </div>
-                            <div class="text-[10px] text-muted-foreground/60">积分</div>
+                            <div class="text-[10px] text-muted-foreground/60">баллы</div>
                         </div>
                     </div>
                 </div>
                 <div v-else class="flex flex-col items-center justify-center py-16 text-muted-foreground/40">
                     <Users class="h-6 w-6 mb-2" />
-                    <p class="text-sm">暂无排行数据</p>
+                    <p class="text-sm">Нет данных рейтинга</p>
                 </div>
             </template>
 
-            <!-- ═══ 积分流水 ═══ -->
+            <!-- ═══ История баллов ═══ -->
             <template v-else>
                 <div v-if="logsData.items.length" class="divide-y divide-border/30">
                     <div v-for="(log, idx) in logsData.items" :key="log.id"
                         class="flex items-center gap-3 px-5 py-3 hover:bg-muted/20 transition-colors animate-slide-up"
                         :style="{ animationDelay: `${idx * 30}ms` }">
-                        <!-- 加减符号 -->
                         <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                             :class="log.score_delta > 0 ? 'bg-emerald-100' : log.score_delta < 0 ? 'bg-rose-100' : 'bg-muted'">
                             <TrendingUp v-if="log.score_delta > 0" class="h-4 w-4 text-emerald-600" />
@@ -359,7 +344,6 @@ function currentPageData() {
                             <Minus v-else class="h-4 w-4 text-muted-foreground" />
                         </div>
 
-                        <!-- 详情 -->
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-medium">{{ log.agent_name }}</span>
@@ -370,7 +354,6 @@ function currentPageData() {
                             </div>
                         </div>
 
-                        <!-- 积分变动 -->
                         <div class="text-right shrink-0">
                             <span class="text-sm font-bold tabular-nums"
                                 :class="log.score_delta > 0 ? 'text-emerald-600' : log.score_delta < 0 ? 'text-rose-500' : ''">
@@ -381,11 +364,11 @@ function currentPageData() {
                 </div>
                 <div v-else class="flex flex-col items-center justify-center py-16 text-muted-foreground/40">
                     <Trophy class="h-6 w-6 mb-2" />
-                    <p class="text-sm">暂无积分流水</p>
+                    <p class="text-sm">История пуста</p>
                 </div>
             </template>
 
-            <!-- 分页 -->
+            <!-- Пагинация -->
             <div v-if="!loading && !error && currentPageData().total_pages > 1"
                 class="flex items-center justify-center gap-2 py-3 border-t border-border/30 text-xs text-muted-foreground">
                 <Button variant="ghost" size="icon" class="h-7 w-7" :disabled="currentPageData().page <= 1 || loading"
@@ -402,4 +385,3 @@ function currentPageData() {
         </div>
     </div>
 </template>
-

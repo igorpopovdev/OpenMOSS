@@ -37,10 +37,6 @@ const selectedAgentName = computed(() => {
     return agentSummaries.value.find((a) => a.id === selectedAgentId.value)?.name ?? null
 })
 
-// ============================================================
-// 数据加载
-// ============================================================
-
 async function checkStatus() {
     try {
         const res = await feedApi.status()
@@ -78,7 +74,6 @@ async function loadLogs(incremental = false) {
             flashingAgentIds.value = agentIds
             setTimeout(() => { flashingAgentIds.value = new Set() }, 2000)
 
-            // 自动滚到顶部
             await nextTick()
             timelineRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
         } else if (!incremental) {
@@ -110,7 +105,6 @@ const switchingAgent = ref(false)
 
 function handleSelectAgent(agentId: string | null) {
     if (agentId === selectedAgentId.value) {
-        // 取消选中 — 无需骨架屏
         selectedAgentId.value = null
         mobileSheetOpen.value = false
         return
@@ -128,40 +122,37 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 
 <template>
     <div class="h-screen flex flex-col bg-background text-foreground">
-        <!-- 加载 -->
+        <!-- Загрузка -->
         <div v-if="loading" class="flex-1 flex items-center justify-center">
             <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
 
-        <!-- 未启用 -->
+        <!-- Отключено -->
         <div v-else-if="!enabled"
             class="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground/60 px-6">
             <Lock class="w-10 h-10 mb-1" />
-            <p class="text-base font-semibold text-foreground/80">活动流展示页尚未开启</p>
+            <p class="text-base font-semibold text-foreground/80">Лента активности отключена</p>
             <p class="text-sm text-muted-foreground/50 text-center max-w-sm leading-relaxed">
-                开启后，所有 Agent 的 API 活动将在此页面实时展示，
-                无需登录即可查看。
+                После включения все API-запросы агентов будут отображаться на этой странице в реальном времени.
+                Доступ возможен без авторизации.
             </p>
-            <p class="text-xs text-muted-foreground/40 mt-1">在后台设置中开启，或修改 <code
-                    class="bg-muted px-1.5 py-0.5 rounded text-[11px]">config.yaml → webui.public_feed: true</code></p>
+            <p class="text-xs text-muted-foreground/40 mt-1">Включите в настройках или измените <code class="bg-muted px-1.5 py-0.5 rounded text-[11px]">config.yaml → webui.public_feed: true</code></p>
         </div>
 
-        <!-- 正常 -->
+        <!-- Нормальный режим -->
         <template v-else>
-            <!-- 顶栏 -->
+            <!-- Верхняя панель -->
             <header class="shrink-0 flex items-center justify-between px-4 h-11 border-b border-border/40">
                 <div class="flex items-center gap-2 min-w-0">
-                    <div
-                        class="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-[10px] font-bold shrink-0">
-                        F</div>
-                    <span class="text-sm font-medium truncate">活动流</span>
-                    <span class="text-[10px] text-muted-foreground/40 tabular-nums">{{ filteredActivities.length
-                        }}</span>
+                    <div class="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-[10px] font-bold shrink-0">
+                        F
+                    </div>
+                    <span class="text-sm font-medium truncate">Лента</span>
+                    <span class="text-[10px] text-muted-foreground/40 tabular-nums">{{ filteredActivities.length }}</span>
 
                     <template v-if="selectedAgentName">
                         <Separator orientation="vertical" class="h-3 mx-0.5 opacity-30" />
-                        <span class="text-[11px] text-muted-foreground truncate max-w-[100px]">{{ selectedAgentName
-                            }}</span>
+                        <span class="text-[11px] text-muted-foreground truncate max-w-[100px]">{{ selectedAgentName }}</span>
                         <button class="text-muted-foreground/40 hover:text-foreground" @click="selectedAgentId = null">
                             <X class="w-2.5 h-2.5" />
                         </button>
@@ -176,7 +167,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
                         <RefreshCw class="w-3 h-3" />
                     </Button>
 
-                    <!-- 手机端 Agent -->
+                    <!-- Агенты на мобильных -->
                     <Sheet v-model:open="mobileSheetOpen">
                         <SheetTrigger as-child>
                             <Button variant="ghost" size="icon" class="h-7 w-7 lg:hidden">
@@ -185,7 +176,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
                         </SheetTrigger>
                         <SheetContent side="bottom" class="max-h-[60vh] rounded-t-xl">
                             <SheetHeader>
-                                <SheetTitle class="text-sm">Agents</SheetTitle>
+                                <SheetTitle class="text-sm">Агенты</SheetTitle>
                             </SheetHeader>
                             <div class="overflow-y-auto">
                                 <FeedAgentList :agents="agentSummaries" :flashing-agent-ids="flashingAgentIds"
@@ -196,12 +187,12 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
                 </div>
             </header>
 
-            <!-- 主体 -->
+            <!-- Основной контент -->
             <div class="flex flex-1 min-h-0">
-                <!-- 日志 -->
+                <!-- Лента -->
                 <div ref="timelineRef" class="flex-1 overflow-y-auto p-4">
                     <div class="max-w-3xl mx-auto rounded-xl border border-border/40 bg-card overflow-hidden">
-                        <!-- 切换加载 -->
+                        <!-- Переключение -->
                         <div v-if="switchingAgent" class="flex items-center justify-center py-16">
                             <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
                         </div>
@@ -217,29 +208,24 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
                         <div v-if="!switchingAgent && filteredActivities.length === 0"
                             class="flex flex-col items-center justify-center py-20 text-muted-foreground/40">
                             <Inbox class="w-6 h-6 mb-2" />
-                            <p class="text-xs">暂无活动记录</p>
-                            <p class="text-[10px] mt-1 text-muted-foreground/30">Agent 发起 API 请求后，活动会自动出现在这里</p>
+                            <p class="text-xs">Нет записей активности</p>
+                            <p class="text-[10px] mt-1 text-muted-foreground/30">Записи появятся после запросов агентов</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Agent 侧栏 (PC) — 右侧可折叠 -->
-                <aside
-                    class="hidden lg:flex flex-col shrink-0 border-l border-border/40 overflow-hidden transition-all duration-300 ease-in-out"
+                <!-- Боковая панель агентов (ПК) -->
+                <aside class="hidden lg:flex flex-col shrink-0 border-l border-border/40 overflow-hidden transition-all duration-300 ease-in-out"
                     :class="sidebarCollapsed ? 'w-10' : 'w-[400px]'">
-                    <!-- 折叠头 -->
                     <div class="flex items-center h-8 shrink-0"
                         :class="sidebarCollapsed ? 'justify-center' : 'px-3 justify-between'">
-                        <span v-if="!sidebarCollapsed"
-                            class="text-[10px] text-muted-foreground/40 font-medium uppercase tracking-wider">
-                            Agents · {{ agentSummaries.length }}
+                        <span v-if="!sidebarCollapsed" class="text-[10px] text-muted-foreground/40 font-medium uppercase tracking-wider">
+                            Агенты · {{ agentSummaries.length }}
                         </span>
-                        <Button variant="ghost" size="icon" class="h-6 w-6"
-                            @click="sidebarCollapsed = !sidebarCollapsed">
+                        <Button variant="ghost" size="icon" class="h-6 w-6" @click="sidebarCollapsed = !sidebarCollapsed">
                             <component :is="sidebarCollapsed ? ChevronLeft : ChevronRight" class="w-3 h-3" />
                         </Button>
                     </div>
-                    <!-- 内容 -->
                     <div v-if="!sidebarCollapsed" class="flex-1 overflow-y-auto">
                         <FeedAgentList :agents="agentSummaries" :flashing-agent-ids="flashingAgentIds"
                             :selected-agent-id="selectedAgentId" @select="handleSelectAgent" />
@@ -247,44 +233,16 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
                 </aside>
             </div>
 
-            <!-- 底栏 -->
-            <footer
-                class="shrink-0 flex items-center justify-center gap-2 h-6 text-[10px] text-muted-foreground/30 border-t border-border/20">
+            <!-- Нижняя панель -->
+            <footer class="shrink-0 flex items-center justify-center gap-2 h-6 text-[10px] text-muted-foreground/30 border-t border-border/20">
                 <span class="flex items-center gap-1">
                     <span class="inline-block w-1 h-1 rounded-full"
                         :class="paused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'" />
-                    {{ paused ? '已暂停' : '实时更新中' }}
+                    {{ paused ? 'Приостановлено' : 'Обновляется' }}
                 </span>
                 <span>·</span>
-                <span class="tabular-nums">{{ agentSummaries.length }} 个 Agent</span>
+                <span class="tabular-nums">{{ agentSummaries.length }} агентов</span>
             </footer>
         </template>
     </div>
 </template>
-
-<style scoped>
-.feed-slide-enter-active {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.feed-slide-enter-from {
-    opacity: 0;
-    transform: translateY(-8px);
-}
-
-@keyframes slide-up-fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-slide-up {
-    animation: slide-up-fade-in 0.35s ease-out both;
-}
-</style>

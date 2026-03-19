@@ -82,31 +82,31 @@ function minDelay(): Promise<void> {
 }
 
 const taskStatusOptions = [
-    { value: 'all', label: '全部状态' },
-    { value: 'planning', label: '规划中' },
-    { value: 'active', label: '进行中' },
-    { value: 'in_progress', label: '推进中' },
-    { value: 'completed', label: '已完成' },
-    { value: 'archived', label: '已归档' },
-    { value: 'cancelled', label: '已取消' },
+    { value: 'all', label: 'Все статусы' },
+    { value: 'planning', label: 'Планируется' },
+    { value: 'active', label: 'Активна' },
+    { value: 'in_progress', label: 'В работе' },
+    { value: 'completed', label: 'Завершена' },
+    { value: 'archived', label: 'В архиве' },
+    { value: 'cancelled', label: 'Отменена' },
 ] as const
 
 const taskTypeOptions = [
-    { value: 'all', label: '全部类型' },
-    { value: 'once', label: '一次性任务' },
-    { value: 'recurring', label: '周期任务' },
+    { value: 'all', label: 'Все типы' },
+    { value: 'once', label: 'Разовая' },
+    { value: 'recurring', label: 'Периодическая' },
 ] as const
 
 const subTaskStatusOptions = [
-    { value: 'all', label: '全部' },
-    { value: 'pending', label: '待分配' },
-    { value: 'assigned', label: '已分配' },
-    { value: 'in_progress', label: '执行中' },
-    { value: 'review', label: '待审查' },
-    { value: 'rework', label: '返工中' },
-    { value: 'blocked', label: '阻塞' },
-    { value: 'done', label: '已完成' },
-    { value: 'cancelled', label: '已取消' },
+    { value: 'all', label: 'Все' },
+    { value: 'pending', label: 'Ожидает' },
+    { value: 'assigned', label: 'Назначена' },
+    { value: 'in_progress', label: 'Выполняется' },
+    { value: 'review', label: 'На проверке' },
+    { value: 'rework', label: 'Доработка' },
+    { value: 'blocked', label: 'Заблокирована' },
+    { value: 'done', label: 'Готово' },
+    { value: 'cancelled', label: 'Отменена' },
 ] as const
 
 const selectedTaskProgress = computed(() => {
@@ -115,8 +115,6 @@ const selectedTaskProgress = computed(() => {
     }
     return getCompletionRatio(selectedTask.value.done_count, selectedTask.value.sub_task_count)
 })
-
-
 
 const reloadTasksDebounced = useDebounceFn(() => {
     taskPage.value = 1
@@ -166,15 +164,15 @@ function toggleModule(moduleId: string) {
 
 function formatDate(value: string | null) {
     if (!value) {
-        return '未记录'
+        return '—'
     }
 
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) {
-        return '未记录'
+        return '—'
     }
 
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat('ru-RU', {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
@@ -184,10 +182,10 @@ function formatDate(value: string | null) {
 
 function formatTaskType(value: string) {
     if (value === 'once') {
-        return '一次性'
+        return 'Разовая'
     }
     if (value === 'recurring') {
-        return '周期性'
+        return 'Периодическая'
     }
     return value
 }
@@ -195,12 +193,12 @@ function formatTaskType(value: string) {
 function formatTaskStatus(value: string) {
     return (
         {
-            planning: '规划中',
-            active: '进行中',
-            in_progress: '推进中',
-            completed: '已完成',
-            archived: '已归档',
-            cancelled: '已取消',
+            planning: 'Планируется',
+            active: 'Активна',
+            in_progress: 'В работе',
+            completed: 'Завершена',
+            archived: 'В архиве',
+            cancelled: 'Отменена',
         }[value] ?? value
     )
 }
@@ -208,14 +206,14 @@ function formatTaskStatus(value: string) {
 function formatSubTaskStatus(value: string) {
     return (
         {
-            pending: '待分配',
-            assigned: '已分配',
-            in_progress: '执行中',
-            review: '待审查',
-            rework: '返工中',
-            blocked: '阻塞',
-            done: '已完成',
-            cancelled: '已取消',
+            pending: 'Ожидает',
+            assigned: 'Назначена',
+            in_progress: 'Выполняется',
+            review: 'На проверке',
+            rework: 'Доработка',
+            blocked: 'Заблокирована',
+            done: 'Готово',
+            cancelled: 'Отменена',
         }[value] ?? value
     )
 }
@@ -223,9 +221,9 @@ function formatSubTaskStatus(value: string) {
 function formatPriority(value: string) {
     return (
         {
-            high: '高优先',
-            medium: '中优先',
-            low: '低优先',
+            high: 'Высокий',
+            medium: 'Средний',
+            low: 'Низкий',
         }[value] ?? value
     )
 }
@@ -236,8 +234,6 @@ function getCompletionRatio(doneCount: number, totalCount: number) {
     }
     return Math.round((doneCount / totalCount) * 100)
 }
-
-
 
 function getTaskBadgeClass(status: string) {
     return (
@@ -307,8 +303,6 @@ function getPriorityBadgeClass(priority: string) {
     )
 }
 
-
-
 async function loadTasks() {
     const requestId = ++taskListRequestId
     loadingTasks.value = true
@@ -359,7 +353,7 @@ async function loadTasks() {
         }
 
         console.error('Failed to load admin tasks', error)
-        taskListError.value = '任务列表加载失败，请稍后再试。'
+        taskListError.value = 'Не удалось загрузить список задач. Попробуйте позже.'
         taskPageData.value = createEmptyPage<AdminTaskItem>()
         clearSelectedTaskState()
     } finally {
@@ -408,7 +402,7 @@ async function loadSelectedTaskContext(taskId: string) {
         }
 
         console.error('Failed to load selected task context', error)
-        detailError.value = '任务详情加载失败，请重新刷新。'
+        detailError.value = 'Не удалось загрузить детали задачи. Обновите страницу.'
         selectedTask.value = null
         modulePageData.value = createEmptyPage<AdminModuleItem>()
         subTaskPageData.value = createEmptyPage<AdminSubTaskItem>()
@@ -447,7 +441,7 @@ async function loadSelectedTaskSubTasks(taskId: string) {
         }
 
         console.error('Failed to load task sub tasks', error)
-        subTaskListError.value = '子任务列表加载失败，请稍后重试。'
+        subTaskListError.value = 'Не удалось загрузить подзадачи. Попробуйте позже.'
         subTaskPageData.value = createEmptyPage<AdminSubTaskItem>()
     } finally {
         if (requestId === subTaskListRequestId) {
@@ -522,7 +516,7 @@ async function openSubTaskDetail(subTaskId: string) {
         }
 
         console.error('Failed to load sub task detail', error)
-        subTaskDetailError.value = '子任务详情加载失败，请稍后重试。'
+        subTaskDetailError.value = 'Не удалось загрузить детали подзадачи. Попробуйте позже.'
     } finally {
         if (requestId === subTaskDetailRequestId) {
             subTaskDetailLoading.value = false
@@ -534,16 +528,16 @@ async function openSubTaskDetail(subTaskId: string) {
 <template>
     <TooltipProvider>
         <div class="flex flex-col h-[calc(100vh-3.5rem)]">
-            <!-- ─── 顶栏：搜索 + 筛选 + 刷新 ─── -->
+            <!-- ─── Панель: поиск + фильтры + обновление ─── -->
             <header class="shrink-0 border-b border-border/40 bg-background px-4 py-3 space-y-2.5">
                 <div class="flex items-center gap-3">
                     <div class="relative flex-1 max-w-md">
                         <Search
                             class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input v-model="taskKeyword" class="h-9 bg-muted/30 pl-10 text-sm" placeholder="搜索任务名或说明…" />
+                        <Input v-model="taskKeyword" class="h-9 bg-muted/30 pl-10 text-sm" placeholder="Поиск по названию или описанию…" />
                     </div>
                     <Badge variant="secondary" class="h-7 px-2.5 text-xs tabular-nums shrink-0">
-                        {{ taskPageData.total }} 个任务
+                        {{ taskPageData.total }} задач
                     </Badge>
                     <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0"
                         :disabled="loadingTasks || loadingDetail" @click="refreshCurrentView">
@@ -570,23 +564,23 @@ async function openSubTaskDetail(subTaskId: string) {
                 </div>
             </header>
 
-            <!-- ─── 主体：左列表 + 右详情 ─── -->
+            <!-- ─── Основная область: список + детали ─── -->
             <div class="flex flex-1 min-h-0">
-                <!-- 任务列表 -->
+                <!-- Список задач -->
                 <div class="w-full lg:w-[380px] xl:w-[420px] shrink-0 border-r border-border/40 overflow-y-auto">
-                    <!-- 错误 -->
+                    <!-- Ошибка -->
                     <div v-if="taskListError" class="p-6 text-center">
                         <AlertCircle class="mx-auto h-5 w-5 text-muted-foreground" />
                         <p class="mt-2 text-sm">{{ taskListError }}</p>
-                        <Button class="mt-3" size="sm" @click="refreshCurrentView"> 重新加载 </Button>
+                        <Button class="mt-3" size="sm" @click="refreshCurrentView"> Перезагрузить </Button>
                     </div>
 
-                    <!-- 加载中 -->
+                    <!-- Загрузка -->
                     <div v-else-if="loadingTasks" class="flex items-center justify-center py-16">
                         <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
 
-                    <!-- 任务卡片列表 -->
+                    <!-- Карточки задач -->
                     <template v-else-if="taskPageData.items.length">
                         <div :key="`tasks-${taskPage}-${taskStatus}-${taskType}-${taskKeyword}`"
                             class="divide-y divide-border/30">
@@ -598,7 +592,7 @@ async function openSubTaskDetail(subTaskId: string) {
                                     <div class="min-w-0 flex-1">
                                         <TextOverflowTooltip :text="task.name" as="div"
                                             class="text-sm font-semibold leading-5" />
-                                        <TextOverflowTooltip :text="task.description || '暂无说明'" as="p" :lines="1"
+                                        <TextOverflowTooltip :text="task.description || 'Без описания'" as="p" :lines="1"
                                             class="mt-0.5 text-xs text-muted-foreground leading-4" />
                                     </div>
                                     <Badge variant="outline" :class="getTaskBadgeClass(task.status)"
@@ -608,8 +602,8 @@ async function openSubTaskDetail(subTaskId: string) {
                                 </div>
 
                                 <div class="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-                                    <span class="tabular-nums">{{ task.module_count }} 模块 · {{ task.sub_task_count }}
-                                        子任务</span>
+                                    <span class="tabular-nums">{{ task.module_count }} модулей · {{ task.sub_task_count }}
+                                        подзадач</span>
                                     <div class="flex-1 flex items-center gap-1.5">
                                         <div class="flex-1 h-1.5 rounded-full bg-muted max-w-[80px]">
                                             <div class="h-1.5 rounded-full bg-emerald-500 transition-all" :style="{
@@ -624,7 +618,7 @@ async function openSubTaskDetail(subTaskId: string) {
                             </button>
                         </div>
 
-                        <!-- 分页 -->
+                        <!-- Пагинация -->
                         <div v-if="taskPageData.total_pages > 1"
                             class="flex items-center justify-center gap-2 py-3 border-t border-border/30 text-xs text-muted-foreground">
                             <Button variant="ghost" size="icon" class="h-7 w-7"
@@ -641,38 +635,38 @@ async function openSubTaskDetail(subTaskId: string) {
                         </div>
                     </template>
 
-                    <!-- 空状态 -->
+                    <!-- Пусто -->
                     <div v-else class="flex flex-col items-center justify-center py-16 text-muted-foreground/50">
                         <ListTodo class="h-6 w-6 mb-2" />
-                        <p class="text-sm">没有找到匹配任务</p>
+                        <p class="text-sm">Задачи не найдены</p>
                     </div>
                 </div>
 
-                <!-- ─── 右侧详情 ─── -->
+                <!-- ─── Правая панель ─── -->
                 <div ref="detailAnchor" class="hidden lg:flex flex-col flex-1 min-h-0 overflow-y-auto">
-                    <!-- 加载中 -->
+                    <!-- Загрузка -->
                     <div v-if="loadingDetail" class="flex items-center justify-center flex-1">
                         <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
 
-                    <!-- 错误 -->
+                    <!-- Ошибка -->
                     <div v-else-if="detailError"
                         class="flex flex-col items-center justify-center flex-1 text-muted-foreground/50">
                         <AlertCircle class="h-5 w-5 mb-2" />
                         <p class="text-sm">{{ detailError }}</p>
                         <Button v-if="selectedTaskId" class="mt-3" size="sm"
-                            @click="loadSelectedTaskContext(selectedTaskId)">重试</Button>
+                            @click="loadSelectedTaskContext(selectedTaskId)">Повторить</Button>
                     </div>
 
-                    <!-- 任务详情 -->
+                    <!-- Детали задачи -->
                     <div v-else-if="selectedTask" :key="detailKey" class="p-6 space-y-6 animate-slide-up">
-                        <!-- 任务头 -->
+                        <!-- Заголовок -->
                         <div>
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0 space-y-1">
                                     <TextOverflowTooltip :text="selectedTask.name" as="h2"
                                         class="text-lg font-semibold leading-7" />
-                                    <TextOverflowTooltip :text="selectedTask.description || '暂无任务说明。'" as="p" :lines="2"
+                                    <TextOverflowTooltip :text="selectedTask.description || 'Нет описания задачи.'" as="p" :lines="2"
                                         class="text-sm text-muted-foreground leading-5" />
                                 </div>
                                 <div class="flex gap-1.5 shrink-0">
@@ -685,10 +679,10 @@ async function openSubTaskDetail(subTaskId: string) {
                                 </div>
                             </div>
 
-                            <!-- 进度条 + 统计数字 -->
+                            <!-- Прогресс + статистика -->
                             <div class="mt-4 rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
                                 <div class="flex items-center justify-between text-xs">
-                                    <span class="text-muted-foreground">完成进度</span>
+                                    <span class="text-muted-foreground">Прогресс</span>
                                     <span class="font-semibold tabular-nums">{{ selectedTaskProgress }}%</span>
                                 </div>
                                 <div class="h-2 rounded-full bg-muted">
@@ -696,51 +690,51 @@ async function openSubTaskDetail(subTaskId: string) {
                                         :style="{ width: `${selectedTaskProgress}%` }" />
                                 </div>
                                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground tabular-nums">
-                                    <span>子任务
+                                    <span>Подзадач
                                         <span class="font-medium text-foreground">{{
                                             selectedTask.sub_task_count
                                         }}</span></span>
-                                    <span>已完成
+                                    <span>Готово
                                         <span class="font-medium text-foreground">{{
                                             selectedTask.done_count
                                         }}</span></span>
-                                    <span>执行中
+                                    <span>В работе
                                         <span class="font-medium text-foreground">{{
                                             selectedTask.in_progress_count
                                         }}</span></span>
-                                    <span>待审查
+                                    <span>На проверке
                                         <span class="font-medium text-foreground">{{
                                             selectedTask.review_count
                                         }}</span></span>
-                                    <span>待分配
+                                    <span>Ожидает
                                         <span class="font-medium text-foreground">{{
                                             selectedTask.pending_count
                                         }}</span></span>
-                                    <span v-if="selectedTask.blocked_count">阻塞
+                                    <span v-if="selectedTask.blocked_count">Заблокировано
                                         <span class="font-medium text-rose-500">{{
                                             selectedTask.blocked_count
                                         }}</span></span>
-                                    <span v-if="selectedTask.rework_count">返工
+                                    <span v-if="selectedTask.rework_count">Доработка
                                         <span class="font-medium text-amber-500">{{
                                             selectedTask.rework_count
                                         }}</span></span>
                                 </div>
                                 <div class="flex gap-4 text-[11px] text-muted-foreground/60">
-                                    <span>创建于 {{ formatDate(selectedTask.created_at) }}</span>
-                                    <span>更新于 {{ formatDate(selectedTask.updated_at) }}</span>
+                                    <span>Создана {{ formatDate(selectedTask.created_at) }}</span>
+                                    <span>Обновлена {{ formatDate(selectedTask.updated_at) }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 模块拆分 -->
+                        <!-- Модули -->
                         <div v-if="modulePageData.items.length">
                             <div class="flex items-center justify-between mb-2">
                                 <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-                                    模块拆分 · {{ modulePageData.items.length }}
+                                    Модули · {{ modulePageData.items.length }}
                                 </div>
                                 <button v-if="selectedModuleId" class="text-[10px] text-primary hover:underline"
                                     @click="selectedModuleId = null">
-                                    清除筛选
+                                    Сбросить фильтр
                                 </button>
                             </div>
                             <div class="space-y-2">
@@ -768,11 +762,11 @@ async function openSubTaskDetail(subTaskId: string) {
                             </div>
                         </div>
 
-                        <!-- 子任务列表 -->
+                        <!-- Подзадачи -->
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <div class="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-                                    子任务 · {{ subTaskPageData.total }}
+                                    Подзадачи · {{ subTaskPageData.total }}
                                 </div>
                                 <div class="flex items-center gap-2 text-xs text-muted-foreground">
                                     <span class="tabular-nums">{{ subTaskPageData.page }} / {{
@@ -789,7 +783,7 @@ async function openSubTaskDetail(subTaskId: string) {
                                 </div>
                             </div>
 
-                            <!-- 子任务状态筛选 -->
+                            <!-- Фильтр статусов -->
                             <div class="flex flex-wrap gap-1.5 mb-3">
                                 <Button v-for="option in subTaskStatusOptions" :key="option.value" size="sm"
                                     :variant="subTaskStatus === option.value ? 'default' : 'ghost'"
@@ -798,19 +792,19 @@ async function openSubTaskDetail(subTaskId: string) {
                                 </Button>
                             </div>
 
-                            <!-- 子任务加载中 -->
+                            <!-- Загрузка подзадач -->
                             <div v-if="loadingSubTasks" class="flex items-center justify-center py-10">
                                 <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
                             </div>
 
-                            <!-- 子任务错误 -->
+                            <!-- Ошибка подзадач -->
                             <div v-else-if="subTaskListError" class="text-center py-6">
                                 <p class="text-sm text-muted-foreground">{{ subTaskListError }}</p>
                                 <Button v-if="selectedTaskId" class="mt-2" size="sm"
-                                    @click="loadSelectedTaskSubTasks(selectedTaskId)">重试</Button>
+                                    @click="loadSelectedTaskSubTasks(selectedTaskId)">Повторить</Button>
                             </div>
 
-                            <!-- 子任务列表 -->
+                            <!-- Список подзадач -->
                             <div v-else-if="subTaskPageData.items.length" :key="`st-${subTaskPage}-${subTaskStatus}`"
                                 class="space-y-1.5">
                                 <template v-for="(item, idx) in subTaskPageData.items" :key="item.id">
@@ -829,7 +823,7 @@ async function openSubTaskDetail(subTaskId: string) {
                                                     <TextOverflowTooltip :text="item.name" as="div"
                                                         class="text-sm font-medium leading-5" />
                                                 </div>
-                                                <TextOverflowTooltip :text="item.description || '暂无说明'" as="p"
+                                                <TextOverflowTooltip :text="item.description || 'Без описания'" as="p"
                                                     :lines="1"
                                                     class="mt-0.5 text-xs text-muted-foreground leading-4 pl-3" />
                                             </div>
@@ -847,12 +841,12 @@ async function openSubTaskDetail(subTaskId: string) {
                                             <Badge variant="secondary" class="text-[10px] px-1.5 h-5">
                                                 {{ formatTaskType(item.type) }}
                                             </Badge>
-                                            <span>{{ item.module_name || '未绑定模块' }}</span>
+                                            <span>{{ item.module_name || 'Без модуля' }}</span>
                                             <span v-if="item.assigned_agent_name">· {{ item.assigned_agent_name
                                             }}</span>
                                             <span v-if="item.current_session_id" class="text-primary/60">Session: {{
                                                 item.current_session_id.slice(0, 8) }}…</span>
-                                            <span v-if="item.rework_count > 0" class="text-amber-500">返工 {{
+                                            <span v-if="item.rework_count > 0" class="text-amber-500">Доработка {{
                                                 item.rework_count }}</span>
                                             <span class="ml-auto tabular-nums">{{ formatDate(item.updated_at)
                                             }}</span>
@@ -861,30 +855,31 @@ async function openSubTaskDetail(subTaskId: string) {
                                 </template>
                             </div>
 
-                            <!-- 子任务空状态 -->
+                            <!-- Пусто -->
+                            <!-- Пусто -->
                             <div v-else class="flex flex-col items-center justify-center py-8 text-muted-foreground/40">
-                                <p class="text-xs">当前条件下没有子任务</p>
+                                <p class="text-xs">Нет подзадач по текущему фильтру</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 未选择任务 -->
+                    <!-- Не выбрана задача -->
                     <div v-if="!loadingDetail && !detailError && !selectedTask"
                         class="flex flex-col items-center justify-center flex-1 text-muted-foreground/40">
                         <FolderKanban class="h-8 w-8 mb-3" />
-                        <p class="text-sm font-medium text-muted-foreground/60">点击左侧任务查看详情</p>
-                        <p class="text-xs mt-1">模块拆分和子任务会在这里展示</p>
+                        <p class="text-sm font-medium text-muted-foreground/60">Выберите задачу слева</p>
+                        <p class="text-xs mt-1">Модули и подзадачи отобразятся здесь</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ─── 子任务详情抽屉 ─── -->
+        <!-- ─── Панель деталей подзадачи ─── -->
         <Sheet v-model:open="subTaskSheetOpen">
             <SheetContent side="right" class="w-full sm:max-w-xl p-0">
                 <SheetHeader class="shrink-0 px-6 pt-6 pb-4 border-b border-border/30">
-                    <SheetTitle class="pr-8">子任务详情</SheetTitle>
-                    <SheetDescription>查看交付要求、验收标准和执行上下文。</SheetDescription>
+                    <SheetTitle>Детали подзадачи</SheetTitle>
+                    <SheetDescription>Просмотр требований, критериев приёмки и контекста выполнения.</SheetDescription>
                 </SheetHeader>
 
                 <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
@@ -894,13 +889,13 @@ async function openSubTaskDetail(subTaskId: string) {
 
                     <div v-else-if="subTaskDetailError"
                         class="rounded-xl border border-dashed border-border bg-muted/20 p-5 text-center">
-                        <p class="text-sm font-medium">加载失败</p>
+                        <p class="text-sm font-medium">Ошибка загрузки</p>
                         <p class="mt-1 text-xs text-muted-foreground">{{ subTaskDetailError }}</p>
                     </div>
 
                     <template v-else-if="selectedSubTask">
                         <div class="space-y-4">
-                            <!-- 标签 -->
+                            <!-- Бейджи -->
                             <div class="flex flex-wrap gap-1.5">
                                 <Badge variant="outline" :class="getSubTaskBadgeClass(selectedSubTask.status)">
                                     {{ formatSubTaskStatus(selectedSubTask.status) }}
@@ -913,67 +908,67 @@ async function openSubTaskDetail(subTaskId: string) {
                                 </Badge>
                             </div>
 
-                            <!-- 名称+描述 -->
+                            <!-- Название + описание -->
                             <div>
                                 <h3 class="text-lg font-semibold leading-7">{{ selectedSubTask.name }}</h3>
                                 <p class="mt-1.5 text-sm leading-6 text-muted-foreground whitespace-pre-wrap">
-                                    {{ selectedSubTask.description || '暂无子任务说明。' }}
+                                    {{ selectedSubTask.description || 'Нет описания подзадачи.' }}
                                 </p>
                             </div>
 
-                            <!-- 上下文 -->
+                            <!-- Контекст -->
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                                     <div class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">
-                                        所属
+                                        Родитель
                                     </div>
                                     <div class="mt-1.5 text-sm font-medium leading-5">
                                         {{ selectedSubTask.task_name }}
                                     </div>
                                     <div class="mt-0.5 text-xs text-muted-foreground">
-                                        {{ selectedSubTask.module_name || '未绑定模块' }}
+                                        {{ selectedSubTask.module_name || 'Без модуля' }}
                                     </div>
                                 </div>
                                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                                     <div class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">
-                                        执行者
+                                        Исполнитель
                                     </div>
                                     <div class="mt-1.5 text-sm font-medium">
-                                        {{ selectedSubTask.assigned_agent_name || '未分配' }}
+                                        {{ selectedSubTask.assigned_agent_name || 'Не назначен' }}
                                     </div>
                                     <div class="mt-0.5 text-xs text-muted-foreground truncate">
-                                        Session: {{ selectedSubTask.current_session_id || '未建立' }}
+                                        Session: {{ selectedSubTask.current_session_id || 'Не создана' }}
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- 交付物 -->
+                            <!-- Требования к результату -->
                             <div class="rounded-xl border border-border/50 p-3.5">
                                 <div class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">
-                                    交付物要求
+                                    Требования к результату
                                 </div>
                                 <p class="mt-2 whitespace-pre-wrap text-sm leading-6">
-                                    {{ selectedSubTask.deliverable || '暂无交付物要求。' }}
+                                    {{ selectedSubTask.deliverable || 'Требования не указаны.' }}
                                 </p>
                             </div>
 
-                            <!-- 验收标准 -->
+                            <!-- Критерии приёмки -->
                             <div class="rounded-xl border border-border/50 p-3.5">
                                 <div class="text-[11px] text-muted-foreground/60 uppercase tracking-wider">
-                                    验收标准
+                                    Критерии приёмки
                                 </div>
                                 <p class="mt-2 whitespace-pre-wrap text-sm leading-6">
-                                    {{ selectedSubTask.acceptance || '暂无验收标准。' }}
+                                    {{ selectedSubTask.acceptance || 'Критерии не указаны.' }}
                                 </p>
                             </div>
 
                             <Separator />
 
-                            <!-- 元数据 -->
+                            <!-- Метаданные -->
                             <div class="flex gap-4 text-xs text-muted-foreground">
-                                <span>返工 <span class="font-medium text-foreground">{{ selectedSubTask.rework_count
+                                <span>Доработок <span class="font-medium text-foreground">{{ selectedSubTask.rework_count
                                         }}</span></span>
-                                <span>更新于 {{ formatDate(selectedSubTask.updated_at) }}</span>
+                                <span>Обновлена {{ formatDate(selectedSubTask.updated_at) }}</span>
                             </div>
                         </div>
                     </template>
@@ -982,4 +977,3 @@ async function openSubTaskDetail(subTaskId: string) {
         </Sheet>
     </TooltipProvider>
 </template>
-

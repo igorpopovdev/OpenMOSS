@@ -16,12 +16,12 @@ import {
   Users, ScrollText, LayoutTemplate,
 } from 'lucide-vue-next'
 
-// ── 状态 ────────────────────────────────────────────────
+// ── Статус ────────────────────────────────────────────────
 const loading = ref(true)
 const agents = ref<AgentPromptMeta[]>([])
 const templates = ref<PromptTemplate[]>([])
 
-// 视图模式
+// 
 const mode = ref<'list' | 'create' | 'edit' | 'preview' | 'template' | 'agent-view'>('list')
 const editSlug = ref('')
 const form = ref({
@@ -31,34 +31,33 @@ const form = ref({
   description: '',
 })
 
-// 创建/编辑的两个文本域
+// Создать/Редактировать
 const promptContent = ref('')
 const onboardingContent = ref('')
 const isRoleLoading = ref(false)
 
-// 角色切换确认弹窗
+// РольПодтвердить
 const showRoleConfirm = ref(false)
 const roleConfirmTarget = ref('')
 const roleConfirmPrevious = ref('')
 
-// 删除确认弹窗
+// УдалитьПодтвердить
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref('')
 
-// 模板查看/编辑
+// ШаблонПросмотр/Редактировать
 const templateForm = ref({ role: '', content: '', filename: '' })
 const templateEditing = ref(false)
 
-// 组合预览
+// Предпросмотр
 const composedPrompt = ref('')
 const copied = ref(false)
 const previewMode = ref<'rendered' | 'source'>('rendered')
 
-// 操作中
-const saving = ref(false)
+// const saving = ref(false)
 const deleting = ref('')
 
-// 消息
+// 
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 
@@ -69,7 +68,7 @@ function showMessage(text: string, type: 'success' | 'error' = 'success') {
 }
 
 
-// ── 全局规则 ──────────────────────────────────────────
+// ── Правила ──────────────────────────────────────────
 interface RuleItem {
   id: string
   scope: string
@@ -83,19 +82,19 @@ const rulesLoading = ref(false)
 const ruleSaving = ref(false)
 const ruleDeleting = ref('')
 
-// 规则编辑器弹窗（统一用于新建和编辑）
+// ПравилаРедактировать（СоздатьРедактировать）
 const showRuleEditor = ref(false)
-const ruleEditorId = ref<string | null>(null)  // null = 新建模式
+const ruleEditorId = ref<string | null>(null)  // null = Создать
 const ruleEditorContent = ref('')
 const ruleEditorPreviewMode = ref<'split' | 'edit' | 'preview'>('split')
 
-// 渲染规则编辑器的预览
+// ПравилаРедактироватьПредпросмотр
 const renderedRulePreview = computed(() => {
   if (!ruleEditorContent.value) return ''
   return marked(ruleEditorContent.value) as string
 })
 
-// 删除规则确认弹窗
+// УдалитьПравилаПодтвердить
 const showRuleDeleteConfirm = ref(false)
 const ruleDeleteTarget = ref('')
 
@@ -105,7 +104,7 @@ async function loadRules() {
     const { data } = await adminRuleApi.list('global')
     rules.value = data
   } catch (e) {
-    console.error('加载规则失败', e)
+    console.error('Правила', e)
   } finally {
     rulesLoading.value = false
   }
@@ -129,19 +128,19 @@ async function saveRuleEditor() {
   ruleSaving.value = true
   try {
     if (ruleEditorId.value) {
-      // 编辑模式
+      // Редактировать
       await adminRuleApi.update(ruleEditorId.value, ruleEditorContent.value)
-      showMessage('规则已更新')
+      showMessage('ПравилаОбновить')
     } else {
-      // 新建模式
+      // Создать
       await adminRuleApi.create({ scope: 'global', content: ruleEditorContent.value })
-      showMessage('规则已创建')
+      showMessage('ПравилаСоздать')
     }
     closeRuleEditor()
     await loadRules()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '保存失败', 'error')
+    showMessage(err.response?.data?.detail || 'Сохранить', 'error')
   } finally {
     ruleSaving.value = false
   }
@@ -158,43 +157,43 @@ async function doRuleDelete() {
   ruleDeleting.value = id
   try {
     await adminRuleApi.delete(id)
-    showMessage('规则已删除')
+    showMessage('ПравилаУдалить')
     await loadRules()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '删除失败', 'error')
+    showMessage(err.response?.data?.detail || 'Удалить', 'error')
   } finally {
     ruleDeleting.value = ''
   }
 }
 
-// ── 角色选项 ────────────────────────────────────────────
+// ── Роль ────────────────────────────────────────────
 const roleOptions = [
-  { value: 'planner', label: '规划者 Planner' },
-  { value: 'executor', label: '执行者 Executor' },
-  { value: 'reviewer', label: '审查者 Reviewer' },
-  { value: 'patrol', label: '巡查者 Patrol' },
+  { value: 'planner', label: 'Планировщик Planner' },
+  { value: 'executor', label: 'Исполнитель Executor' },
+  { value: 'reviewer', label: 'Рецензент Reviewer' },
+  { value: 'patrol', label: 'Патрульный Patrol' },
 ]
 
 const roleLabel = (role: string) =>
   roleOptions.find(r => r.value === role)?.label || role
 
 const templateDescriptions: Record<string, string> = {
-  'planner': '负责任务拆解与规划，将大目标分解为可执行的子任务',
-  'executor': '负责具体执行任务，产出内容、代码或操作结果',
-  'reviewer': '负责审核执行结果，确保产出质量达标',
-  'patrol': '负责系统巡查和异常检测，维护运行稳定性',
+  'planner': '，',
+  'executor': '，Содержимое、',
+  'reviewer': '，',
+  'patrol': '，',
 }
 
-// 必需角色配置
+// РольНастроить
 const requiredRoles = [
-  { role: 'planner', label: '规划者 Planner', desc: '拆解任务、制定计划、分配子任务', single: true },
-  { role: 'reviewer', label: '审查者 Reviewer', desc: '审核执行者产出，通过或打回返工', single: true },
-  { role: 'patrol', label: '巡查者 Patrol', desc: '系统巡查、异常检测、维护稳定', single: true },
-  { role: 'executor', label: '执行者 Executor', desc: '实际执行子任务，可创建多个不同专长的执行者', single: false },
+  { role: 'planner', label: 'Планировщик Planner', desc: '、、', single: true },
+  { role: 'reviewer', label: 'Рецензент Reviewer', desc: 'Исполнитель，', single: true },
+  { role: 'patrol', label: 'Патрульный Patrol', desc: '、、', single: true },
+  { role: 'executor', label: 'Исполнитель Executor', desc: '，СоздатьИсполнитель', single: false },
 ]
 
-// 角色状态检查
+// РольСтатус
 const roleStatus = computed(() => {
   return requiredRoles.map(r => ({
     ...r,
@@ -205,15 +204,15 @@ const roleStatus = computed(() => {
 
 const hasMissingRoles = computed(() => roleStatus.value.some(r => !r.done))
 
-// 按角色分组，每组内按创建时间倒序
+// Роль，Создано
 const groupedAgents = computed(() => {
   const groups: Record<string, AgentPromptMeta[]> = {}
   for (const a of agents.value) {
-    const key = a.role || '未知'
+    const key = a.role || ''
     if (!groups[key]) groups[key] = []
     groups[key].push(a)
   }
-  // 每组按 created_at 倒序
+  //  created_at 
   for (const key of Object.keys(groups)) {
     groups[key]?.sort((a, b) => {
       const ta = a.created_at || ''
@@ -224,7 +223,7 @@ const groupedAgents = computed(() => {
   return groups
 })
 
-// ── Markdown 渲染 ────────────────────────────────────────
+// ── Markdown  ────────────────────────────────────────
 const renderedMarkdown = computed(() => {
   if (!composedPrompt.value) return ''
   return marked(composedPrompt.value) as string
@@ -241,7 +240,7 @@ const renderedAgentContent = computed(() => {
   return marked(agentViewData.value.content) as string
 })
 
-// 编辑器实时预览：提示词 + 对接指引合并
+// РедактироватьПредпросмотр：Подсказка + 
 const fullEditorContent = computed(() => {
   const parts: string[] = []
   if (promptContent.value.trim()) parts.push(promptContent.value.trim())
@@ -256,7 +255,7 @@ const renderedEditorPreview = computed(() => {
 
 const editorCopied = ref(false)
 
-// ── 数据加载 ─────────────────────────────────────────────
+// ──  ─────────────────────────────────────────────
 async function loadData() {
   loading.value = true
   try {
@@ -267,7 +266,7 @@ async function loadData() {
     agents.value = agentsRes.data
     templates.value = templatesRes.data
   } catch {
-    showMessage('加载失败', 'error')
+    showMessage('Ошибка загрузки', 'error')
   } finally {
     loading.value = false
   }
@@ -278,7 +277,7 @@ onMounted(() => {
   loadRules()
 })
 
-// ── 角色切换 → 自动加载模板和对接指引 ────────────────────
+// ── Роль → Шаблон ────────────────────
 async function loadRoleContent(role: string) {
   isRoleLoading.value = true
   try {
@@ -300,11 +299,11 @@ function handleRoleChange(event: Event) {
   const newRole = (event.target as HTMLSelectElement).value
   if (!newRole) return
 
-  // 如果已有内容，弹出自定义确认框
+  // Содержимое，ПользовательскоеПодтвердить
   if (form.value.role && promptContent.value.trim()) {
     roleConfirmPrevious.value = form.value.role
     roleConfirmTarget.value = newRole
-    // 先恢复 select 的值（因为 v-model 已经改了）
+    //  select （ ）
     form.value.role = roleConfirmPrevious.value
     showRoleConfirm.value = true
     return
@@ -324,7 +323,7 @@ function cancelRoleSwitch() {
   showRoleConfirm.value = false
 }
 
-// ── 新建 ────────────────────────────────────────────
+// ── Создать ────────────────────────────────────────────
 function startCreate(presetRole?: string) {
   form.value = { slug: '', name: '', role: presetRole || '', description: '' }
   promptContent.value = ''
@@ -337,7 +336,7 @@ function startCreate(presetRole?: string) {
 
 async function handleCreate() {
   if (!form.value.slug || !form.value.name || !form.value.role || !promptContent.value) {
-    showMessage('请填写必填项', 'error')
+    showMessage('Обязательно', 'error')
     return
   }
   saving.value = true
@@ -349,19 +348,19 @@ async function handleCreate() {
       description: form.value.description,
       content: fullEditorContent.value,
     })
-    showMessage('创建成功')
+    showMessage('Создано')
     mode.value = 'list'
     await loadData()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '创建失败', 'error')
+    showMessage(err.response?.data?.detail || 'Ошибка создания', 'error')
   } finally {
     saving.value = false
   }
 }
 
-// ── 编辑 ────────────────────────────────────────────────
-// ONBOARDING_MARKER 已在一键复制区声明
+// ── Редактировать ────────────────────────────────────────────────
+// ONBOARDING_MARKER Копировать
 
 async function startEdit(slug: string) {
   try {
@@ -374,11 +373,11 @@ async function startEdit(slug: string) {
       description: data.description,
     }
 
-    // 拆分内容：如果包含对接指引标记，分到两个文本域
+    // Содержимое：，
     const content = data.content
     const markerIdx = content.indexOf(ONBOARDING_MARKER)
     if (markerIdx > 0) {
-      // 找到标记前的分隔线 ---
+      //  ---
       let splitIdx = markerIdx
       const before = content.substring(0, markerIdx)
       const lastSep = before.lastIndexOf('---')
@@ -388,7 +387,7 @@ async function startEdit(slug: string) {
       onboardingContent.value = content.substring(markerIdx).trim()
     } else {
       promptContent.value = content
-      // 自动生成对接指引
+      // 
       try {
         const { data: ob } = await promptsApi.getOnboarding(data.role)
         onboardingContent.value = ob.content
@@ -399,7 +398,7 @@ async function startEdit(slug: string) {
 
     mode.value = 'edit'
   } catch {
-    showMessage('加载失败', 'error')
+    showMessage('Ошибка загрузки', 'error')
   }
 }
 
@@ -412,18 +411,18 @@ async function handleUpdate() {
       description: form.value.description,
       content: fullEditorContent.value,
     })
-    showMessage('保存成功')
+    showMessage('Сохранить')
     mode.value = 'list'
     await loadData()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '保存失败', 'error')
+    showMessage(err.response?.data?.detail || 'Сохранить', 'error')
   } finally {
     saving.value = false
   }
 }
 
-// ── 删除 ────────────────────────────────────────────────
+// ── Удалить ────────────────────────────────────────────────
 
 async function handleDelete(slug: string, event: Event) {
   event.stopPropagation()
@@ -437,17 +436,17 @@ async function confirmDelete() {
   deleting.value = slug
   try {
     await promptsApi.deleteAgent(slug)
-    showMessage('已删除')
+    showMessage('Удалить')
     await loadData()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '删除失败', 'error')
+    showMessage(err.response?.data?.detail || 'Удалить', 'error')
   } finally {
     deleting.value = ''
   }
 }
 
-// ── 模板查看/编辑 ────────────────────────────────────────
+// ── ШаблонПросмотр/Редактировать ────────────────────────────────────────
 async function openTemplate(role: string) {
   try {
     const { data } = await promptsApi.getTemplate(role)
@@ -455,7 +454,7 @@ async function openTemplate(role: string) {
     templateEditing.value = false
     mode.value = 'template'
   } catch {
-    showMessage('加载模板失败', 'error')
+    showMessage('Шаблон', 'error')
   }
 }
 
@@ -463,18 +462,18 @@ async function saveTemplate() {
   saving.value = true
   try {
     await promptsApi.updateTemplate(templateForm.value.role, templateForm.value.content)
-    showMessage('模板已保存')
+    showMessage('ШаблонСохранить')
     templateEditing.value = false
     await loadData()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '保存失败', 'error')
+    showMessage(err.response?.data?.detail || 'Сохранить', 'error')
   } finally {
     saving.value = false
   }
 }
 
-// ── Agent 查看 ───────────────────────────────────────────
+// ── Agent Просмотр ───────────────────────────────────────────
 async function openAgentView(slug: string) {
   try {
     const { data } = await promptsApi.getAgent(slug)
@@ -487,39 +486,39 @@ async function openAgentView(slug: string) {
     }
     mode.value = 'agent-view'
   } catch {
-    showMessage('加载失败', 'error')
+    showMessage('Ошибка загрузки', 'error')
   }
 }
 
-// ── 一键复制 ─────────────────────────────────────────────
+// ── Копировать ─────────────────────────────────────────────
 const previewRole = ref('')
 
 const roleLabels: Record<string, string> = {
-  planner: '规划者',
-  executor: '执行者',
-  reviewer: '审查者',
-  patrol: '巡查者',
+  planner: 'Планировщик',
+  executor: 'Исполнитель',
+  reviewer: 'Рецензент',
+  patrol: 'Патрульный',
 }
 
-const ONBOARDING_MARKER = '## 🔧 平台对接'
+const ONBOARDING_MARKER = '## 🔧 Платформа'
 
-// 从 composedPrompt 中提取对接指引部分
+//  composedPrompt 
 const onboardingSection = computed(() => {
   const idx = composedPrompt.value.indexOf(ONBOARDING_MARKER)
   if (idx < 0) return ''
   return composedPrompt.value.substring(idx).trim()
 })
 
-// 生成 OpenClaw 快速复制前缀
+//  OpenClaw Копировать
 function buildQuickCopyPrefix(role: string): string {
   const label = roleLabels[role] || role
   return (
-    `🦞 **OpenClaw 快速对接** — 请按以下步骤完成配置：\n\n` +
-    `1. 将下方「角色提示词」**完整替换**到你的 **AGENTS.md**（角色：${label}）\n` +
-    `2. 根据新的 AGENTS.md 内容，自行更新你的 **SOUL.md**（提炼核心身份和行为准则）\n` +
-    `3. 按底部「平台对接」指引完成注册，获取 API Key\n` +
-    `4. 按指引下载并保存 Skill 工具包\n` +
-    `5. 完成后**删除**底部「平台对接」部分，只保留角色提示词\n\n` +
+    `🦞 **OpenClaw ** — Настроить：\n\n` +
+    `1. 「РольПодсказка」**** **AGENTS.md**（Роль：${label}）\n` +
+    `2.  AGENTS.md Содержимое，Обновить **SOUL.md**（）\n` +
+    `3. 「Платформа」， API Key\n` +
+    `4. Сохранить Skill \n` +
+    `5. **Удалить**「Платформа」，РольПодсказка\n\n` +
     `---\n\n`
   )
 }
@@ -528,7 +527,7 @@ async function showCompose(slug: string) {
   composedPrompt.value = ''
   copied.value = false
   previewMode.value = 'rendered'
-  // 查找 agent 的 role
+  //  agent  role
   const agent = agents.value.find(a => a.slug === slug)
   previewRole.value = agent?.role || ''
   try {
@@ -538,50 +537,50 @@ async function showCompose(slug: string) {
     mode.value = 'preview'
   } catch (e: unknown) {
     const err = e as { response?: { data?: { detail?: string } } }
-    showMessage(err.response?.data?.detail || '生成失败', 'error')
+    showMessage(err.response?.data?.detail || '', 'error')
   }
 }
 
-// 🦞 OpenClaw 快速复制（带前缀引导）
+// 🦞 OpenClaw Копировать（）
 const lobsterCopied = ref(false)
 async function copyWithPrefix() {
   try {
     const text = buildQuickCopyPrefix(previewRole.value) + composedPrompt.value
     await navigator.clipboard.writeText(text)
     lobsterCopied.value = true
-    showMessage('🦞 已复制（含对接引导）')
+    showMessage('🦞 Копировать（）')
     setTimeout(() => { lobsterCopied.value = false }, 2000)
   } catch {
-    showMessage('复制失败，请手动选中复制', 'error')
+    showMessage('Копировать，Копировать', 'error')
   }
 }
 
-// 普通复制（仅提示词）
+// Копировать（Подсказка）
 async function copyToClipboard() {
   try {
     await navigator.clipboard.writeText(composedPrompt.value)
     copied.value = true
-    showMessage('已复制到剪贴板')
+    showMessage('Копировать')
     setTimeout(() => { copied.value = false }, 2000)
   } catch {
-    showMessage('复制失败，请手动选中复制', 'error')
+    showMessage('Копировать，Копировать', 'error')
   }
 }
 
-// 复制平台对接指引
+// КопироватьПлатформа
 const onboardingCopied = ref(false)
 async function copyOnboarding() {
   if (!onboardingSection.value) {
-    showMessage('未找到对接指引内容', 'error')
+    showMessage('Содержимое', 'error')
     return
   }
   try {
     await navigator.clipboard.writeText(onboardingSection.value)
     onboardingCopied.value = true
-    showMessage('已复制平台对接指引')
+    showMessage('КопироватьПлатформа')
     setTimeout(() => { onboardingCopied.value = false }, 2000)
   } catch {
-    showMessage('复制失败', 'error')
+    showMessage('Копировать', 'error')
   }
 }
 
@@ -589,10 +588,10 @@ async function copyEditorContent() {
   try {
     await navigator.clipboard.writeText(fullEditorContent.value)
     editorCopied.value = true
-    showMessage('已复制到剪贴板')
+    showMessage('Копировать')
     setTimeout(() => { editorCopied.value = false }, 2000)
   } catch {
-    showMessage('复制失败', 'error')
+    showMessage('Копировать', 'error')
   }
 }
 
@@ -605,7 +604,7 @@ function goBack() {
 <template>
   <div class="p-6 max-w-7xl mx-auto">
 
-    <!-- 消息提示 -->
+    <!-- Подсказка -->
     <Transition name="toast">
       <div v-if="message"
         class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 rounded-xl px-5 py-3 text-sm font-medium shadow-xl ring-1 ring-black/5 backdrop-blur-md"
@@ -617,7 +616,7 @@ function goBack() {
       </div>
     </Transition>
 
-    <!-- 视图过渡动画 -->
+    <!--  -->
     <Transition name="view" mode="out-in" appear>
 
       <div v-if="mode === 'list'" key="list" class="space-y-4 max-w-5xl mx-auto">
@@ -627,47 +626,47 @@ function goBack() {
             <TabsTrigger value="agents"
               class="text-xs px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5">
               <Users class="h-3.5 w-3.5" />
-              Agent 对接
+              Agent 
               <span class="text-muted-foreground">({{ agents.length }})</span>
             </TabsTrigger>
             <TabsTrigger value="rules"
               class="text-xs px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5">
               <ScrollText class="h-3.5 w-3.5" />
-              全局规则
+              Правила
               <span class="text-muted-foreground">({{ rules.length }})</span>
             </TabsTrigger>
             <TabsTrigger value="templates"
               class="text-xs px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5">
               <LayoutTemplate class="h-3.5 w-3.5" />
-              角色模板
+              РольШаблон
             </TabsTrigger>
           </TabsList>
 
-          <!-- Tab: Agent 对接 -->
+          <!-- Tab: Agent  -->
           <TabsContent value="agents" class="mt-5 space-y-5">
 
-            <!-- 标题 + 进度 + 新建 -->
+            <!--  +  + Создать -->
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <h2 class="text-xl font-bold">Agent 对接</h2>
+                <h2 class="text-xl font-bold">Agent </h2>
                 <div v-if="!loading && hasMissingRoles"
                   class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-2.5 py-1">
                   <div class="h-1.5 w-10 rounded-full bg-muted overflow-hidden">
                     <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
                       :style="{ width: `${(roleStatus.filter(r => r.done).length / roleStatus.length) * 100}%` }" />
                   </div>
-                  {{roleStatus.filter(r => r.done).length}}/{{ roleStatus.length }} 角色
+                  {{roleStatus.filter(r => r.done).length}}/{{ roleStatus.length }} Роль
                 </div>
               </div>
               <Button @click="startCreate()">
                 <Plus class="mr-1.5 h-4 w-4" />
-                新建提示词
+                СоздатьПодсказка
               </Button>
             </div>
 
-            <!-- 缺失角色 -->
+            <!-- Роль -->
             <div v-if="!loading && hasMissingRoles" class="flex items-center gap-2 flex-wrap text-sm">
-              <span class="text-muted-foreground text-xs">缺少以下角色，点击可快速创建：</span>
+              <span class="text-muted-foreground text-xs">Роль,Создать：</span>
               <template v-for="r in roleStatus.filter(r => !r.done)" :key="r.role">
                 <button
                   class="inline-flex items-center gap-1.5 rounded-full border border-dashed px-3 py-1 text-xs font-medium transition-all duration-200 hover:shadow-sm"
@@ -695,53 +694,52 @@ function goBack() {
                   'bg-teal-500/10 text-teal-600 dark:text-teal-400': r.role === 'patrol',
                 }">
                 <Check class="h-3 w-3" />
-                {{ r.role === 'planner' ? '规划者' : r.role === 'reviewer' ? '审查者' : r.role === 'patrol' ? '巡查者' :
-                  `执行者×${r.count}` }}
+                {{ r.role === 'planner' ? 'Планировщик' : r.role === 'reviewer' ? 'Рецензент' : r.role === 'patrol' ? 'Патрульный' :
+                  `Исполнитель×${r.count}` }}
               </span>
             </div>
 
-            <!-- 使用说明 -->
+            <!-- Инструкция -->
             <details class="group" :open="(agents.length === 0 || hasMissingRoles) || undefined">
               <summary
                 class="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors select-none list-none [&::-webkit-details-marker]:hidden">
                 <ChevronRight class="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
-                使用说明
+                Инструкция
               </summary>
               <Card class="mt-2 bg-muted/30 border-dashed">
                 <CardContent class="py-3 px-4 text-sm text-muted-foreground leading-relaxed space-y-2.5">
-                  <p>管理 Agent 提示词，hover 翻转卡片查看详情和操作按钮。</p>
+                  <p>Управление промптами агентов，hover Подробнее。</p>
                   <div class="rounded-md bg-primary/5 border border-primary/20 px-3 py-2.5 space-y-1.5">
-                    <p><strong class="text-foreground">OpenClaw 对接</strong></p>
-                    <p>1. 点击 🦞 <strong class="text-foreground">快速复制</strong>，内容已包含完整对接引导</p>
-                    <p>2. 发送给 Agent，它会自动完成：替换 AGENTS.md → 更新 SOUL.md → 注册 → 下载 Skill</p>
-                    <p>3. 已有提示词的 Agent，可用「<strong class="text-foreground">Agent 入职包</strong>」单独补发注册 + Skill 指引</p>
+                    <p><strong class="text-foreground">OpenClaw </strong></p>
+                    <p>1.  🦞 <strong class="text-foreground">Копировать</strong>，Содержимое</p>
+                    <p>2.  Agent，： AGENTS.md → Обновить SOUL.md →  →  Skill</p>
+                    <p>3. Подсказка Agent，「<strong class="text-foreground">Agent </strong>」 + Skill </p>
                   </div>
-                  <p><strong class="text-foreground">其他平台</strong> — 使用普通「复制」按钮，自行配置即可。</p>
+                  <p><strong class="text-foreground">Платформа</strong> — 「Копировать」，Настроить。</p>
                 </CardContent>
               </Card>
             </details>
 
-            <!-- 加载中 -->
+            <!-- Загрузка -->
             <div v-if="loading" class="flex justify-center py-16">
               <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
 
-            <!-- 空状态 -->
+            <!-- Статус -->
             <Card v-else-if="agents.length === 0" class="border-dashed">
               <CardContent class="flex flex-col items-center justify-center py-16 text-center">
                 <FileText class="h-14 w-14 text-muted-foreground/40 mb-4" />
-                <p class="text-lg font-semibold text-muted-foreground">还没有 Agent 提示词</p>
+                <p class="text-lg font-semibold text-muted-foreground"> Agent Подсказка</p>
                 <p class="text-sm text-muted-foreground mt-1.5 max-w-sm">
-                  创建提示词后，可以复制并发送给 Agent 完成对接
+                  Создать промпт，Копировать Agent 
                 </p>
                 <Button class="mt-5" @click="startCreate()">
                   <Plus class="mr-1.5 h-4 w-4" />
-                  创建第一个
-                </Button>
+                  Создать</Button>
               </CardContent>
             </Card>
 
-            <!-- Agent 翻转卡片（按角色分组） -->
+            <!-- Agent （Роль） -->
             <div v-else class="space-y-8">
               <div v-for="(items, role) in groupedAgents" :key="role" class="space-y-4">
                 <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -756,16 +754,16 @@ function goBack() {
                   <span class="text-xs font-normal">({{ items.length }})</span>
                 </h3>
 
-                <!-- 卡片网格 -->
+                <!--  -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   <div v-for="item in items" :key="item.slug" class="flip-card" style="perspective: 1200px;">
                     <div class="flip-card-inner relative w-full" style="transform-style: preserve-3d;"
                       :style="{ minHeight: '200px' }">
 
-                      <!-- 正面 -->
+                      <!--  -->
                       <div class="flip-card-front absolute inset-0 rounded-xl border bg-card overflow-hidden flex flex-col"
                         style="backface-visibility: hidden;">
-                        <!-- 顶部渐变条 -->
+                        <!-- шт. -->
                         <div class="h-1.5" :class="{
                           'bg-gradient-to-r from-violet-400 to-indigo-500': item.role === 'planner',
                           'bg-gradient-to-r from-sky-400 to-blue-500': item.role === 'executor',
@@ -776,7 +774,7 @@ function goBack() {
                         <div class="p-5 flex flex-col justify-between flex-1">
                           <div>
                             <div class="flex items-start justify-between">
-                              <!-- 图标圆形 -->
+                              <!--  -->
                               <div class="h-11 w-11 rounded-xl flex items-center justify-center shadow-sm" :class="{
                                 'bg-gradient-to-br from-violet-50 to-indigo-100 dark:from-violet-950 dark:to-indigo-900': item.role === 'planner',
                                 'bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900': item.role === 'executor',
@@ -790,15 +788,15 @@ function goBack() {
                                 <ShieldCheck v-else-if="item.role === 'patrol'" class="h-5 w-5 text-teal-600 dark:text-teal-400" />
                                 <Bot v-else class="h-5 w-5 text-gray-600 dark:text-gray-400" />
                               </div>
-                              <!-- 状态标签 -->
+                              <!-- СтатусТег -->
                               <div class="flex gap-1">
                                 <span v-if="item.example"
                                   class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 font-medium">
-                                  示例
+                                  Пример
                                 </span>
                                 <span v-if="item.status === 'unconfigured'"
                                   class="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 font-medium">
-                                  未配置
+                                  Не настроено
                                 </span>
                               </div>
                             </div>
@@ -817,10 +815,10 @@ function goBack() {
                         </div>
                       </div>
 
-                      <!-- 背面 -->
+                      <!--  -->
                       <div class="flip-card-back absolute inset-0 rounded-xl border bg-card overflow-hidden flex flex-col"
                         style="backface-visibility: hidden; transform: rotateY(180deg);">
-                        <!-- 顶部彩条 -->
+                        <!-- шт. -->
                         <div class="h-1.5" :class="{
                           'bg-gradient-to-r from-violet-400 to-indigo-500': item.role === 'planner',
                           'bg-gradient-to-r from-sky-400 to-blue-500': item.role === 'executor',
@@ -840,24 +838,24 @@ function goBack() {
                               }">{{ roleLabel(item.role) }}</span>
                             </div>
                             <p class="text-xs text-muted-foreground leading-relaxed line-clamp-4">
-                              {{ item.description || '暂无描述' }}
+                              {{ item.description || 'НетОписание' }}
                             </p>
                             <p class="text-[10px] text-muted-foreground/50 font-mono truncate pt-1">{{ item.filename }}</p>
                           </div>
                           <div class="flex items-center gap-1.5 pt-3 border-t border-border/40 mt-2">
                             <Button size="sm" class="flex-1 h-7 text-xs bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-sm"
                               @click.stop="showCompose(item.slug)">
-                              <span class="mr-1">🦞</span> 快速复制
+                              <span class="mr-1">🦞</span> Копировать
                             </Button>
-                            <Button variant="outline" size="icon" class="h-7 w-7" title="查看"
+                            <Button variant="outline" size="icon" class="h-7 w-7" title="Просмотр"
                               @click.stop="openAgentView(item.slug)">
                               <Eye class="h-3 w-3" />
                             </Button>
-                            <Button variant="outline" size="icon" class="h-7 w-7" title="编辑"
+                            <Button variant="outline" size="icon" class="h-7 w-7" title="Редактировать"
                               @click.stop="startEdit(item.slug)">
                               <Pencil class="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-7 w-7" title="删除"
+                            <Button variant="ghost" size="icon" class="h-7 w-7" title="Удалить"
                               :disabled="deleting === item.slug"
                               @click.stop="handleDelete(item.slug, $event)">
                               <Loader2 v-if="deleting === item.slug" class="h-3 w-3 animate-spin" />
@@ -875,45 +873,45 @@ function goBack() {
 
           </TabsContent>
 
-          <!-- Tab: 全局规则 -->
+          <!-- Tab: Правила -->
           <TabsContent value="rules" class="mt-4 space-y-4">
-            <!-- 加载中 -->
+            <!-- Загрузка -->
             <div v-if="rulesLoading" class="flex justify-center py-12">
               <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
 
             <template v-else>
-              <!-- 空状态 -->
+              <!-- Статус -->
               <Card v-if="rules.length === 0" class="border-dashed">
                 <CardContent class="flex flex-col items-center justify-center py-12 text-center">
                   <FileText class="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <p class="text-lg font-medium text-muted-foreground">暂无全局规则</p>
+                  <p class="text-lg font-medium text-muted-foreground">НетПравила</p>
                   <p class="text-sm text-muted-foreground mt-1">
-                    Agent 每次执行任务时会通过 API 获取全局规则，用于约束行为规范
+                    Agent  API Правила，
                   </p>
                   <Button class="mt-4" variant="outline" @click="openRuleEditor()">
                     <Plus class="mr-1.5 h-4 w-4" />
-                    创建全局规则
+                    СоздатьПравила
                   </Button>
                 </CardContent>
               </Card>
 
-              <!-- 已有规则（只允许一条） -->
+              <!-- Правила（шт.） -->
               <template v-if="rules.length > 0">
                 <Card v-for="rule in rules" :key="rule.id"
                   class="transition-all duration-200 hover:shadow-sm">
                   <CardContent class="p-4">
                     <div class="flex items-start gap-3">
-                      <!-- 内容 -->
+                      <!-- Содержимое -->
                       <div class="flex-1 min-w-0 prose prose-sm dark:prose-invert max-w-none"
                         v-html="marked(rule.content)" />
-                      <!-- 操作按钮（始终可见） -->
+                      <!-- （） -->
                       <div class="flex items-center gap-1 flex-shrink-0">
-                        <Button variant="ghost" size="icon" class="h-7 w-7" title="编辑"
+                        <Button variant="ghost" size="icon" class="h-7 w-7" title="Редактировать"
                           @click="openRuleEditor(rule)">
                           <Pencil class="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" class="h-7 w-7" title="删除"
+                        <Button variant="ghost" size="icon" class="h-7 w-7" title="Удалить"
                           :disabled="ruleDeleting === rule.id" @click="confirmRuleDelete(rule.id)">
                           <Loader2 v-if="ruleDeleting === rule.id" class="h-3.5 w-3.5 animate-spin" />
                           <Trash2 v-else class="h-3.5 w-3.5 text-destructive/70" />
@@ -921,7 +919,7 @@ function goBack() {
                       </div>
                     </div>
                     <p v-if="rule.updated_at" class="text-xs text-muted-foreground mt-2 opacity-50">
-                      更新于 {{ rule.updated_at }}
+                      Обновитьобновлено: {{ rule.updated_at }}
                     </p>
                   </CardContent>
                 </Card>
@@ -929,13 +927,13 @@ function goBack() {
             </template>
           </TabsContent>
 
-          <!-- Tab: 角色模板 -->
+          <!-- Tab: РольШаблон -->
           <TabsContent value="templates" class="mt-5 space-y-5">
             <div class="flex items-center justify-between">
               <div>
-                <h2 class="text-xl font-bold">角色模板</h2>
+                <h2 class="text-xl font-bold">РольШаблон</h2>
                 <p class="text-sm text-muted-foreground mt-0.5">
-                  定义每种角色的通用行为规范，新建提示词时自动填入
+                  Роль，СоздатьПодсказка
                 </p>
               </div>
             </div>
@@ -944,7 +942,7 @@ function goBack() {
               <div v-for="tmpl in templates" :key="tmpl.role"
                 class="group cursor-pointer rounded-xl border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
                 @click="openTemplate(tmpl.role)">
-                <!-- 顶部渐变条 -->
+                <!-- шт. -->
                 <div class="h-1.5" :class="{
                   'bg-gradient-to-r from-violet-400 to-indigo-500': tmpl.role === 'planner',
                   'bg-gradient-to-r from-sky-400 to-blue-500': tmpl.role === 'executor',
@@ -953,7 +951,7 @@ function goBack() {
                   'bg-gradient-to-r from-gray-400 to-gray-500': !['planner','executor','reviewer','patrol'].includes(tmpl.role),
                 }" />
                 <div class="p-5 flex items-start gap-4">
-                  <!-- 图标 -->
+                  <!--  -->
                   <div class="h-12 w-12 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0" :class="{
                     'bg-gradient-to-br from-violet-50 to-indigo-100 dark:from-violet-950 dark:to-indigo-900': tmpl.role === 'planner',
                     'bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900': tmpl.role === 'executor',
@@ -967,7 +965,7 @@ function goBack() {
                     <ShieldCheck v-else-if="tmpl.role === 'patrol'" class="h-6 w-6 text-teal-600 dark:text-teal-400" />
                     <Bot v-else class="h-6 w-6 text-gray-600 dark:text-gray-400" />
                   </div>
-                  <!-- 文本 -->
+                  <!--  -->
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
                       <p class="text-base font-bold">{{ roleLabel(tmpl.role) || tmpl.role }}</p>
@@ -979,10 +977,10 @@ function goBack() {
                       }">{{ tmpl.filename }}</span>
                     </div>
                     <p class="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                      {{ templateDescriptions[tmpl.role] || '通用角色模板' }}
+                      {{ templateDescriptions[tmpl.role] || 'РольШаблон' }}
                     </p>
                   </div>
-                  <!-- 箭头 -->
+                  <!--  -->
                   <ChevronRight class="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors flex-shrink-0 mt-1" />
                 </div>
               </div>
@@ -993,7 +991,7 @@ function goBack() {
       </div>
 
       <!-- ============================================================ -->
-      <!-- 模板查看/编辑 -->
+      <!-- ШаблонПросмотр/Редактировать -->
       <!-- ============================================================ -->
       <div v-else-if="mode === 'template'" key="template" class="space-y-4 max-w-5xl mx-auto">
         <div class="flex items-center gap-3">
@@ -1008,13 +1006,13 @@ function goBack() {
           </div>
           <Button v-if="!templateEditing" variant="outline" @click="templateEditing = true">
             <Pencil class="mr-1.5 h-4 w-4" />
-            编辑
+            Редактировать
           </Button>
           <div v-else class="flex gap-2">
-            <Button variant="outline" @click="templateEditing = false">取消</Button>
+            <Button variant="outline" @click="templateEditing = false">Отмена</Button>
             <Button @click="saveTemplate" :disabled="saving">
               <Loader2 v-if="saving" class="mr-1.5 h-4 w-4 animate-spin" />
-              {{ saving ? '保存中...' : '保存' }}
+              {{ saving ? 'Сохранить...' : 'Сохранить' }}
             </Button>
           </div>
         </div>
@@ -1029,7 +1027,7 @@ function goBack() {
       </div>
 
       <!-- ============================================================ -->
-      <!-- Agent 提示词查看 -->
+      <!-- Agent ПодсказкаПросмотр -->
       <!-- ============================================================ -->
       <div v-else-if="mode === 'agent-view'" key="agent-view" class="space-y-4 max-w-5xl mx-auto">
         <div class="flex items-center gap-3">
@@ -1044,11 +1042,11 @@ function goBack() {
           </div>
           <Button variant="outline" @click="showCompose(agentViewData.slug)">
             <span class="mr-1.5">🦞</span>
-            OpenClaw 快速复制
+            OpenClaw Копировать
           </Button>
           <Button variant="outline" @click="startEdit(agentViewData.slug)">
             <Pencil class="mr-1.5 h-4 w-4" />
-            编辑
+            Редактировать
           </Button>
         </div>
 
@@ -1061,25 +1059,25 @@ function goBack() {
       </div>
 
       <!-- ============================================================ -->
-      <!-- 新建 / 编辑  —— 左右分栏布局 -->
+      <!-- Создать / Редактировать  ——  -->
       <!-- ============================================================ -->
       <div v-else-if="mode === 'create' || mode === 'edit'" :key="mode">
-        <!-- 顶部栏 -->
+        <!--  -->
         <div class="flex items-center gap-3 mb-4">
           <Button variant="ghost" size="icon" @click="goBack">
             <ChevronLeft class="h-5 w-5" />
           </Button>
-          <h1 class="text-2xl font-bold flex-1">{{ mode === 'create' ? '新建提示词' : '编辑提示词' }}</h1>
-          <Button variant="outline" @click="goBack">取消</Button>
+          <h1 class="text-2xl font-bold flex-1">{{ mode === 'create' ? 'СоздатьПодсказка' : 'Редактировать промпт' }}</h1>
+          <Button variant="outline" @click="goBack">Отмена</Button>
           <Button @click="mode === 'create' ? handleCreate() : handleUpdate()" :disabled="saving">
             <Loader2 v-if="saving" class="mr-1.5 h-4 w-4 animate-spin" />
-            {{ saving ? '保存中...' : '保存' }}
+            {{ saving ? 'Сохранить...' : 'Сохранить' }}
           </Button>
         </div>
 
-        <!-- 角色选择 -->
+        <!-- Роль -->
         <div class="space-y-2 mb-4">
-          <Label class="text-xs">角色模板 *</Label>
+          <Label class="text-xs">РольШаблон *</Label>
           <div class="grid grid-cols-4 gap-2">
             <button v-for="opt in roleOptions" :key="opt.value" type="button"
               class="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-all duration-200"
@@ -1107,61 +1105,61 @@ function goBack() {
           </div>
         </div>
 
-        <!-- 元信息行 -->
+        <!--  -->
         <div class="grid grid-cols-3 gap-3 mb-4">
           <div class="space-y-1">
-            <Label for="p-name" class="text-xs">显示名称 *</Label>
-            <Input id="p-name" v-model="form.name" placeholder="示例：AI酱瓜" class="h-9" />
+            <Label for="p-name" class="text-xs">ПоказатьНазвание *</Label>
+            <Input id="p-name" v-model="form.name" placeholder="Пример：AI" class="h-9" />
           </div>
           <div class="space-y-1">
-            <Label for="p-slug" class="text-xs">标识名（文件名） *</Label>
-            <Input id="p-slug" v-model="form.slug" placeholder="示例：jianggua" :disabled="mode === 'edit'" class="h-9" />
+            <Label for="p-slug" class="text-xs">（） *</Label>
+            <Input id="p-slug" v-model="form.slug" placeholder="Пример：jianggua" :disabled="mode === 'edit'" class="h-9" />
           </div>
           <div class="space-y-1">
-            <Label for="p-desc" class="text-xs">简介</Label>
-            <Input id="p-desc" v-model="form.description" placeholder="示例：新媒体写手" class="h-9" />
+            <Label for="p-desc" class="text-xs"></Label>
+            <Input id="p-desc" v-model="form.description" placeholder="Пример：" class="h-9" />
           </div>
         </div>
 
-        <!-- 加载中 -->
+        <!-- Загрузка -->
         <div v-if="isRoleLoading" class="flex justify-center py-12">
           <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
 
-        <!-- 左右分栏 -->
+        <!--  -->
         <div v-else class="grid grid-cols-2 gap-4" style="height: calc(100vh - 220px);">
-          <!-- 左侧：编辑 -->
+          <!-- ：Редактировать -->
           <div class="flex flex-col gap-3 min-h-0">
-            <!-- 提示词内容 -->
+            <!-- ПодсказкаСодержимое -->
             <div class="flex flex-col space-y-1" style="flex: 2;">
               <Label class="text-xs text-muted-foreground flex-shrink-0">
-                📝 提示词内容
+                📝 ПодсказкаСодержимое
                 <span v-if="form.role" class="text-primary ml-1">
-                  (已基于「{{ roleLabel(form.role) }}」模板)
+                  (「{{ roleLabel(form.role) }}」Шаблон)
                 </span>
               </Label>
               <textarea v-model="promptContent"
                 class="flex-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-0"
-                placeholder="选择角色后将自动填入模板内容，你可以在此基础上修改..." />
+                placeholder="РольШаблонСодержимое，Основное..." />
             </div>
 
-            <!-- 平台对接指引 -->
+            <!-- Платформа -->
             <div class="flex flex-col space-y-1" style="flex: 1;">
-              <Label class="text-xs text-muted-foreground flex-shrink-0">🔧 平台对接指引（自动生成，可修改）</Label>
+              <Label class="text-xs text-muted-foreground flex-shrink-0">🔧 Платформа（，）</Label>
               <textarea v-model="onboardingContent"
                 class="flex-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-0"
-                placeholder="选择角色后将自动生成对接指引..." />
+                placeholder="Роль..." />
             </div>
           </div>
 
-          <!-- 右侧：实时预览 -->
+          <!-- ：Предпросмотр -->
           <div class="flex flex-col min-h-0">
             <div class="flex items-center justify-between mb-1 flex-shrink-0">
-              <Label class="text-xs text-muted-foreground">👁 完整提示词预览</Label>
+              <Label class="text-xs text-muted-foreground">👁 ПодсказкаПредпросмотр</Label>
               <Button size="sm" variant="ghost" class="h-7 text-xs" @click="copyEditorContent">
                 <Check v-if="editorCopied" class="mr-1 h-3 w-3" />
                 <Copy v-else class="mr-1 h-3 w-3" />
-                {{ editorCopied ? '已复制' : '复制' }}
+                {{ editorCopied ? 'Копировать' : 'Копировать' }}
               </Button>
             </div>
             <Card class="flex-1 overflow-hidden min-h-0">
@@ -1170,28 +1168,28 @@ function goBack() {
                   class="p-4 prose prose-sm dark:prose-invert max-w-none h-full overflow-y-auto"
                   v-html="renderedEditorPreview" />
                 <div v-else class="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  选择角色后将在此显示预览
+                  РольПоказатьПредпросмотр
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        <!-- 角色切换确认弹窗 -->
+        <!-- РольПодтвердить -->
         <Transition name="view">
           <div v-if="showRoleConfirm"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <Card class="w-full max-w-sm shadow-xl">
               <CardContent class="p-6 space-y-4">
                 <div>
-                  <h3 class="text-lg font-semibold">切换角色模板</h3>
+                  <h3 class="text-lg font-semibold">РольШаблон</h3>
                   <p class="text-sm text-muted-foreground mt-2">
-                    切换将用「{{ roleLabel(roleConfirmTarget) }}」的模板覆盖当前已编辑的内容，无法撤销。
+                    「{{ roleLabel(roleConfirmTarget) }}」ШаблонРедактироватьСодержимое，Нет。
                   </p>
                 </div>
                 <div class="flex justify-end gap-2">
-                  <Button variant="outline" @click="cancelRoleSwitch">取消</Button>
-                  <Button variant="destructive" @click="confirmRoleSwitch">确定切换</Button>
+                  <Button variant="outline" @click="cancelRoleSwitch">Отмена</Button>
+                  <Button variant="destructive" @click="confirmRoleSwitch">ОК</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1200,33 +1198,33 @@ function goBack() {
       </div>
 
       <!-- ============================================================ -->
-      <!-- 预览 / 一键复制（含 Markdown 渲染切换） -->
+      <!-- Предпросмотр / Копировать（ Markdown ） -->
       <!-- ============================================================ -->
       <div v-else-if="mode === 'preview'" key="preview" class="space-y-5 max-w-5xl mx-auto">
 
-        <!-- 标题行 -->
+        <!--  -->
         <div class="flex items-center gap-3">
           <Button variant="ghost" size="icon" @click="goBack">
             <ChevronLeft class="h-5 w-5" />
           </Button>
           <div class="flex-1">
-            <h1 class="text-2xl font-bold">完整提示词预览</h1>
+            <h1 class="text-2xl font-bold">ПодсказкаПредпросмотр</h1>
             <p class="text-sm text-muted-foreground mt-0.5">
-              {{ editSlug }} · 角色模板 + 专属内容 + 平台对接指引
+              {{ editSlug }} · РольШаблон + Содержимое + Платформа
             </p>
           </div>
           <Button variant="outline" size="sm" @click="startEdit(editSlug)">
             <Pencil class="mr-1.5 h-3.5 w-3.5" />
-            编辑
+            Редактировать
           </Button>
         </div>
 
-        <!-- 操作栏：复制按钮组 + 视图切换 -->
+        <!-- ：Копировать +  -->
         <div class="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3">
-          <!-- 左：复制按钮组 -->
+          <!-- ：Копировать -->
           <TooltipProvider :delay-duration="200">
             <div class="flex items-center gap-2">
-              <!-- 🦞 OpenClaw 快速复制 — 主按钮 -->
+              <!-- 🦞 OpenClaw Копировать —  -->
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button @click="copyWithPrefix"
@@ -1236,67 +1234,67 @@ function goBack() {
                     class="transition-all duration-300">
                     <Check v-if="lobsterCopied" class="mr-1.5 h-4 w-4" />
                     <span v-else class="mr-1.5 text-base leading-none">🦞</span>
-                    {{ lobsterCopied ? '已复制 ✓' : 'OpenClaw 快速复制' }}
+                    {{ lobsterCopied ? 'Копировать ✓' : 'OpenClaw Копировать' }}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>含完整对接引导，发给 Agent 后自动完成：</p>
-                  <p>更新提示词 → 注册 → 下载 Skill</p>
+                  <p>， Agent ：</p>
+                  <p>ОбновитьПодсказка →  →  Skill</p>
                 </TooltipContent>
               </Tooltip>
 
               <div class="w-px h-6 bg-border" />
 
-              <!-- 普通复制 -->
+              <!-- Копировать -->
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" size="sm" @click="copyToClipboard"
                     :class="copied ? 'border-emerald-500 text-emerald-600' : ''">
                     <Check v-if="copied" class="mr-1 h-3.5 w-3.5" />
                     <Copy v-else class="mr-1 h-3.5 w-3.5" />
-                    {{ copied ? '已复制' : '复制' }}
+                    {{ copied ? 'Копировать' : 'Копировать' }}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  仅复制提示词内容，不含对接引导
+                  КопироватьПодсказкаСодержимое，
                 </TooltipContent>
               </Tooltip>
 
-              <!-- Agent 入职包 -->
+              <!-- Agent  -->
               <Tooltip v-if="onboardingSection">
                 <TooltipTrigger as-child>
                   <Button variant="outline" size="sm" @click="copyOnboarding"
                     :class="onboardingCopied ? 'border-emerald-500 text-emerald-600' : ''">
                     <Check v-if="onboardingCopied" class="mr-1 h-3.5 w-3.5" />
                     <Download v-else class="mr-1 h-3.5 w-3.5" />
-                    {{ onboardingCopied ? '已复制' : 'Agent 入职包' }}
+                    {{ onboardingCopied ? 'Копировать' : 'Agent ' }}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  仅复制注册 + Skill 下载指引，发给已有提示词的 Agent 完成对接
+                  Копировать + Skill ，Подсказка Agent 
                 </TooltipContent>
               </Tooltip>
             </div>
           </TooltipProvider>
 
-          <!-- 右：视图切换 -->
+          <!-- ： -->
           <div class="flex items-center border rounded-lg overflow-hidden">
             <button class="px-3 py-1.5 text-xs flex items-center gap-1.5 transition-colors"
               :class="previewMode === 'rendered' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
               @click="previewMode = 'rendered'">
               <Eye class="h-3.5 w-3.5" />
-              预览
+              Предпросмотр
             </button>
             <button class="px-3 py-1.5 text-xs flex items-center gap-1.5 transition-colors"
               :class="previewMode === 'source' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
               @click="previewMode = 'source'">
               <Code class="h-3.5 w-3.5" />
-              源码
+              
             </button>
           </div>
         </div>
 
-        <!-- 内容区 -->
+        <!-- Содержимое -->
         <Card>
           <CardContent class="p-0">
             <div v-if="previewMode === 'rendered'"
@@ -1307,27 +1305,27 @@ function goBack() {
           </CardContent>
         </Card>
 
-        <!-- 底部说明 -->
+        <!--  -->
         <div class="grid grid-cols-3 gap-3">
           <div class="flex items-start gap-2 rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-2.5">
             <span class="text-base leading-none mt-0.5">🦞</span>
             <div>
-              <p class="text-xs font-medium text-foreground">快速复制</p>
-              <p class="text-xs text-muted-foreground mt-0.5">含对接引导，发给 Agent 一键完成配置</p>
+              <p class="text-xs font-medium text-foreground">Копировать</p>
+              <p class="text-xs text-muted-foreground mt-0.5">， Agent Настроить</p>
             </div>
           </div>
           <div class="flex items-start gap-2 rounded-lg border bg-muted/30 px-3 py-2.5">
             <Copy class="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div>
-              <p class="text-xs font-medium text-foreground">普通复制</p>
-              <p class="text-xs text-muted-foreground mt-0.5">仅提示词，适合手动配置或其他平台</p>
+              <p class="text-xs font-medium text-foreground">Копировать</p>
+              <p class="text-xs text-muted-foreground mt-0.5">Подсказка，НастроитьПлатформа</p>
             </div>
           </div>
           <div class="flex items-start gap-2 rounded-lg border bg-muted/30 px-3 py-2.5">
             <Download class="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div>
-              <p class="text-xs font-medium text-foreground">Agent 入职包</p>
-              <p class="text-xs text-muted-foreground mt-0.5">发给 Agent 完成注册 + 下载 Skill 工具</p>
+              <p class="text-xs font-medium text-foreground">Agent </p>
+              <p class="text-xs text-muted-foreground mt-0.5"> Agent  +  Skill </p>
             </div>
           </div>
         </div>
@@ -1335,78 +1333,78 @@ function goBack() {
 
     </Transition>
 
-    <!-- 删除确认弹窗 -->
+    <!-- УдалитьПодтвердить -->
     <Transition name="view">
       <div v-if="showDeleteConfirm"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <Card class="w-full max-w-sm shadow-xl">
           <CardContent class="p-6 space-y-4">
             <div>
-              <h3 class="text-lg font-semibold">确认删除</h3>
+              <h3 class="text-lg font-semibold">Подтвердить удаление</h3>
               <p class="text-sm text-muted-foreground mt-2">
-                确定要删除提示词「{{ deleteTarget }}」吗？此操作不可撤销。
+                ОКУдалитьПодсказка「{{ deleteTarget }}」？。
               </p>
             </div>
             <div class="flex justify-end gap-2">
-              <Button variant="outline" @click="showDeleteConfirm = false">取消</Button>
-              <Button variant="destructive" @click="confirmDelete">确定删除</Button>
+              <Button variant="outline" @click="showDeleteConfirm = false">Отмена</Button>
+              <Button variant="destructive" @click="confirmDelete">ОКУдалить</Button>
             </div>
           </CardContent>
         </Card>
       </div>
     </Transition>
 
-    <!-- 规则编辑器弹窗（新建 / 编辑共用） -->
+    <!-- ПравилаРедактировать（Создать / РедактироватьВсего） -->
     <Teleport to="body">
       <Transition name="view">
         <div v-if="showRuleEditor"
           class="fixed inset-0 z-[100] flex items-center justify-center">
-          <!-- 遮罩 -->
+          <!--  -->
           <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeRuleEditor()" />
-          <!-- 弹窗主体 -->
+          <!--  -->
           <div class="relative z-10 w-full max-w-4xl mx-6 bg-background rounded-xl shadow-2xl border flex flex-col overflow-hidden"
             style="height: 75vh; max-height: 75vh;">
-            <!-- 头部 -->
+            <!--  -->
             <div class="flex items-center justify-between px-5 py-3 border-b flex-shrink-0">
               <div>
                 <h3 class="text-base font-semibold">
-                  {{ ruleEditorId ? '编辑全局规则' : '新建全局规则' }}
+                  {{ ruleEditorId ? 'РедактироватьПравила' : 'СоздатьПравила' }}
                 </h3>
-                <p class="text-xs text-muted-foreground mt-0.5">支持 Markdown 格式</p>
+                <p class="text-xs text-muted-foreground mt-0.5">Поддерживается Markdown</p>
               </div>
-              <!-- 视图模式切换 -->
+              <!--  -->
               <div class="flex items-center border rounded-lg overflow-hidden">
                 <button class="px-3 py-1.5 text-xs flex items-center gap-1.5 transition-colors"
                   :class="ruleEditorPreviewMode === 'edit' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
                   @click="ruleEditorPreviewMode = 'edit'">
                   <Code class="h-3.5 w-3.5" />
-                  编辑
+                  Редактировать
                 </button>
                 <button class="px-3 py-1.5 text-xs flex items-center gap-1.5 transition-colors"
                   :class="ruleEditorPreviewMode === 'split' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
                   @click="ruleEditorPreviewMode = 'split'">
-                  分栏
+                  
                 </button>
                 <button class="px-3 py-1.5 text-xs flex items-center gap-1.5 transition-colors"
                   :class="ruleEditorPreviewMode === 'preview' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
                   @click="ruleEditorPreviewMode = 'preview'">
                   <Eye class="h-3.5 w-3.5" />
-                  预览
+                  Предпросмотр
                 </button>
               </div>
             </div>
 
-            <!-- 编辑区域 -->
+            <!-- Редактировать -->
             <div class="flex-1 flex min-h-0">
-              <!-- 编辑器 -->
+              <!-- Редактировать -->
               <div v-if="ruleEditorPreviewMode !== 'preview'"
                 :class="ruleEditorPreviewMode === 'split' ? 'w-1/2 border-r' : 'w-full'"
                 class="h-full">
                 <textarea v-model="ruleEditorContent"
                   class="w-full h-full px-4 py-3 text-sm font-mono bg-background border-0 resize-none focus:outline-none focus:ring-0"
-                  placeholder="输入规则内容，支持 Markdown 格式..." />
+                  placeholder="ПравилаСодержимое，Поддерживается Markdown..." />
               </div>
-              <!-- 预览 -->
+              <!-- Предпросмотр -->
               <div v-if="ruleEditorPreviewMode !== 'edit'"
                 :class="ruleEditorPreviewMode === 'split' ? 'w-1/2' : 'w-full'"
                 class="h-full overflow-y-auto">
@@ -1414,17 +1412,17 @@ function goBack() {
                   class="p-4 prose prose-sm dark:prose-invert max-w-none"
                   v-html="renderedRulePreview" />
                 <div v-else class="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  输入内容后在此显示预览
+                  СодержимоеПоказатьПредпросмотр
                 </div>
               </div>
             </div>
 
-            <!-- 底部操作栏 -->
+            <!--  -->
             <div class="flex items-center justify-end gap-2 px-5 py-3 border-t bg-muted/30 flex-shrink-0">
-              <Button variant="outline" @click="closeRuleEditor()">取消</Button>
+              <Button variant="outline" @click="closeRuleEditor()">Отмена</Button>
               <Button :disabled="ruleSaving || !ruleEditorContent.trim()" @click="saveRuleEditor">
                 <Loader2 v-if="ruleSaving" class="mr-1.5 h-4 w-4 animate-spin" />
-                {{ ruleSaving ? '保存中...' : '保存' }}
+                {{ ruleSaving ? 'Сохранить...' : 'Сохранить' }}
               </Button>
             </div>
           </div>
@@ -1432,7 +1430,7 @@ function goBack() {
       </Transition>
     </Teleport>
 
-    <!-- 规则删除确认弹窗 -->
+    <!-- ПравилаУдалитьПодтвердить -->
     <Transition name="toast">
       <div v-if="showRuleDeleteConfirm" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showRuleDeleteConfirm = false" />
@@ -1443,12 +1441,12 @@ function goBack() {
               <Trash2 class="h-5 w-5" />
             </div>
             <div>
-              <p class="font-semibold text-foreground">确定删除此规则？</p>
-              <p class="text-sm text-muted-foreground mt-1">删除后不可恢复</p>
+              <p class="font-semibold text-foreground">ОКУдалитьПравила？</p>
+              <p class="text-sm text-muted-foreground mt-1">Удалить</p>
             </div>
             <div class="flex gap-3 justify-center">
-              <Button variant="outline" @click="showRuleDeleteConfirm = false">取消</Button>
-              <Button variant="destructive" @click="doRuleDelete">确认删除</Button>
+              <Button variant="outline" @click="showRuleDeleteConfirm = false">Отмена</Button>
+              <Button variant="destructive" @click="doRuleDelete">Подтвердить удаление</Button>
             </div>
           </CardContent>
         </Card>
@@ -1494,7 +1492,7 @@ function goBack() {
   transform: translateY(-8px) scale(0.95);
 }
 
-/* 翻转卡片 */
+/*  */
 .flip-card:hover .flip-card-inner {
   transform: rotateY(180deg);
 }

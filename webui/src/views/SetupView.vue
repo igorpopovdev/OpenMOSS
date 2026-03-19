@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ChevronRight, ChevronLeft, Check, Copy, RefreshCw } from 'lucide-vue-next'
 
-
-// 向导步骤
+// Шаги мастера
 const currentStep = ref(0)
 const totalSteps = 5
 const loading = ref(false)
@@ -26,13 +25,13 @@ onMounted(async () => {
             alreadyInitialized.value = true
         }
     } catch {
-        // 接口异常，允许继续
+        // Исключение при ошибке — продолжаем
     } finally {
         pageLoading.value = false
     }
 })
 
-// 表单数据
+// Данные формы
 const form = ref({
     adminPassword: '',
     confirmPassword: '',
@@ -42,7 +41,7 @@ const form = ref({
     externalUrl: '',
     notificationChannels: '',
 })
-// Switch 状态独立声明（reka-ui Switch 对嵌套 ref 属性兼容性差）
+
 const allowRegistration = ref(true)
 const notificationEnabled = ref(false)
 
@@ -63,25 +62,23 @@ async function copyToken(text: string) {
     try {
         await navigator.clipboard.writeText(text)
     } catch {
-        // 静默失败
+        // Тихая ошибка
     }
 }
 
-// 步骤验证
+// Валидация шагов
 const stepErrors = computed(() => {
     const errors: Record<number, string> = {}
 
-    // Step 0: 密码
     if (currentStep.value >= 0 && form.value.adminPassword.length > 0 && form.value.adminPassword.length < 6) {
-        errors[0] = '密码至少 6 位'
+        errors[0] = 'Пароль должен быть не менее 6 символов'
     }
     if (currentStep.value >= 0 && form.value.confirmPassword && form.value.adminPassword !== form.value.confirmPassword) {
-        errors[0] = '两次输入的密码不一致'
+        errors[0] = 'Пароли не совпадают'
     }
 
-    // Step 1: 项目信息
     if (currentStep.value >= 1 && form.value.projectName.length === 0) {
-        errors[1] = '请输入项目名称'
+        errors[1] = 'Введите название проекта'
     }
 
     return errors
@@ -90,15 +87,14 @@ const stepErrors = computed(() => {
 const canProceed = computed(() => {
     switch (currentStep.value) {
         case 0:
-            return form.value.adminPassword.length >= 6
-                && form.value.adminPassword === form.value.confirmPassword
+            return form.value.adminPassword.length >= 6 && form.value.adminPassword === form.value.confirmPassword
         case 1:
             return form.value.projectName.length > 0 && form.value.workspaceRoot.length > 0
         case 2:
             return form.value.registrationToken.length > 0
-        case 3: // 服务地址（可跳过）
+        case 3:
             return true
-        case 4: // 通知（可跳过）
+        case 4:
             return true
         default:
             return false
@@ -126,7 +122,6 @@ async function handleSubmit() {
     error.value = ''
 
     try {
-        // 解析通知渠道
         const channels = form.value.notificationChannels
             .split('\n')
             .map(c => c.trim())
@@ -150,99 +145,96 @@ async function handleSubmit() {
         showRegistrationToken.value = true
     } catch (e: unknown) {
         const err = e as { response?: { data?: { detail?: string } } }
-        error.value = err.response?.data?.detail || '初始化失败，请重试'
+        error.value = err.response?.data?.detail || 'Ошибка инициализации. Попробуйте ещё раз.'
     } finally {
         loading.value = false
     }
 }
 
 function goToLogin() {
-    // 初始化完成后跳转登录，带 from=setup 标记以便登录后跳转到提示词管理
     window.location.href = '/login?from=setup'
 }
 
 const steps = [
-    { title: '管理员密码', desc: '设置管理员登录密码' },
-    { title: '项目信息', desc: '配置项目名称和工作目录' },
-    { title: 'Agent 注册', desc: '设置 Agent 注册令牌' },
-    { title: '服务地址', desc: '配置 Agent 对接的服务访问地址' },
-    { title: '通知渠道', desc: '配置消息通知（可跳过）' },
+    { title: 'Пароль администратора', desc: 'Установите пароль для входа' },
+    { title: 'Информация о проекте', desc: 'Название проекта и рабочая директория' },
+    { title: 'Регистрация агентов', desc: 'Токен для подключения агентов' },
+    { title: 'Адрес сервера', desc: 'URL для подключения агентов' },
+    { title: 'Каналы уведомлений', desc: 'Настройка оповещений (можно пропустить)' },
 ]
 </script>
 
 <template>
     <div class="flex min-h-screen items-center justify-center bg-background p-4">
-        <!-- 加载中 -->
+        <!-- Загрузка -->
         <div v-if="pageLoading" class="flex justify-center py-12">
             <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
 
-        <!-- 已初始化提示 -->
+        <!-- Уже инициализировано -->
         <Card v-else-if="alreadyInitialized" class="w-full max-w-md">
             <CardHeader class="text-center">
-                <div
-                    class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-400">
+                <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-400">
                     <Check class="h-6 w-6" />
                 </div>
-                <CardTitle class="text-xl">系统已初始化</CardTitle>
-                <CardDescription>初始化向导仅在首次部署时可用。</CardDescription>
+                <CardTitle class="text-xl">Система уже инициализирована</CardTitle>
+                <CardDescription>Мастер настройки доступен только при первом развёртывании.</CardDescription>
             </CardHeader>
             <CardContent class="space-y-3">
                 <p class="text-sm text-muted-foreground text-center">
-                    如需修改配置，请登录后在「系统设置」中操作。
+                    Для изменения настроек войдите в систему и перейдите в «Настройки».
                 </p>
                 <Button class="w-full" @click="$router.push('/login')">
-                    前往登录
+                    Перейти к входу
                     <ChevronRight class="ml-1 h-4 w-4" />
                 </Button>
             </CardContent>
         </Card>
 
-        <!-- 初始化完成弹窗 -->
+        <!-- Инициализация завершена -->
         <Card v-else-if="showRegistrationToken" class="w-full max-w-md">
             <CardHeader class="text-center">
-                <div
-                    class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400">
+                <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400">
                     <Check class="h-6 w-6" />
                 </div>
-                <CardTitle class="text-xl">初始化完成！</CardTitle>
-                <CardDescription>请妥善保存以下 Agent 注册令牌</CardDescription>
+                <CardTitle class="text-xl">Инициализация завершена!</CardTitle>
+                <CardDescription>Сохраните токен регистрации агентов</CardDescription>
             </CardHeader>
             <CardContent class="space-y-4">
                 <div class="rounded-lg border bg-muted/50 p-4">
-                    <Label class="text-xs text-muted-foreground">Agent 注册令牌</Label>
+                    <Label class="text-xs text-muted-foreground">Токен регистрации агентов</Label>
                     <div class="mt-1 flex items-center gap-2">
                         <code class="flex-1 text-sm font-mono break-all">{{ resultToken }}</code>
-                        <Button variant="ghost" size="icon" @click="copyToken(resultToken)" title="复制">
+                        <Button variant="ghost" size="icon" @click="copyToken(resultToken)" title="Копировать">
                             <Copy class="h-4 w-4" />
                         </Button>
                     </div>
                     <p class="mt-2 text-xs text-muted-foreground">
-                        Agent 注册时需要此令牌。你可以在「系统设置」中随时修改。
+                        Агенты используют этот токен при регистрации. Его можно изменить в «Настройках».
                     </p>
                 </div>
                 <p class="mt-3 text-xs text-muted-foreground text-center">
-                    登录后可在「提示词管理」中快速创建 Agent 提示词并对接。
+                    После входа можно создавать промпты агентов и управлять ими.
                 </p>
                 <Button class="w-full" @click="goToLogin">
-                    前往登录
+                    Перейти к входу
                     <ChevronRight class="ml-1 h-4 w-4" />
                 </Button>
             </CardContent>
         </Card>
 
-        <!-- 向导主体 -->
+        <!-- Мастер настройки -->
         <Card v-else class="w-full max-w-lg">
             <CardHeader class="text-center">
-                <div
-                    class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
+                <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
                     M
                 </div>
-                <CardTitle class="text-2xl">欢迎使用 OpenMOSS</CardTitle>
-                <CardDescription>多 AI Agent 自组织协作平台 — 初始化设置</CardDescription>
+                <CardTitle class="text-2xl">Добро пожаловать в OpenMOSS</CardTitle>
+                <CardDescription>Платформа мультиагентной — Настройка</CardDescription>
             </CardHeader>
 
             <CardContent>
+                <!-- Индикатор шагов -->
                 <div class="mb-6 flex items-center justify-center gap-2">
                     <template v-for="(step, i) in steps" :key="i">
                         <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors"
@@ -262,146 +254,143 @@ const steps = [
                     {{ steps[currentStep]?.desc }}
                 </p>
 
-                <!-- Step 0: 密码 -->
+                <!-- Шаг 0: Пароль -->
                 <div v-if="currentStep === 0" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="admin-password">管理员密码</Label>
-                        <Input id="admin-password" v-model="form.adminPassword" type="password" placeholder="至少 6 位" />
+                        <Label for="admin-password">Пароль администратора</Label>
+                        <Input id="admin-password" v-model="form.adminPassword" type="password" placeholder="Минимум 6 символов" />
                     </div>
                     <div class="space-y-2">
-                        <Label for="confirm-password">确认密码</Label>
-                        <Input id="confirm-password" v-model="form.confirmPassword" type="password" placeholder="再次输入密码"
+                        <Label for="confirm-password">Подтверждение пароля</Label>
+                        <Input id="confirm-password" v-model="form.confirmPassword" type="password" placeholder="Введите пароль ещё раз"
                             @keyup.enter="nextStep" />
                     </div>
                     <p v-if="stepErrors[0]" class="text-sm text-destructive">{{ stepErrors[0] }}</p>
                 </div>
 
-                <!-- Step 1: 项目信息 -->
+                <!-- Шаг 1: Проект -->
                 <div v-if="currentStep === 1" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="project-name">项目名称</Label>
+                        <Label for="project-name">Название проекта</Label>
                         <Input id="project-name" v-model="form.projectName" placeholder="OpenMOSS" />
                     </div>
                     <div class="space-y-2">
-                        <Label for="workspace-root">工作目录</Label>
-                        <Input id="workspace-root" v-model="form.workspaceRoot"
-                            placeholder="例如：/home/openclaw/workspace" />
+                        <Label for="workspace-root">Рабочая директория</Label>
+                        <Input id="workspace-root" v-model="form.workspaceRoot" placeholder="Например: /home/openclaw/workspace" />
                         <p class="text-xs text-muted-foreground">
-                            部署 OpenClaw 服务器上的一个共享目录路径，所有 Agent 都会在此目录下读写产出物。请确保该路径在服务器上已存在且 Agent 进程有读写权限。
+                            Общая директория на сервере, где агенты создают и хранят результаты. Убедитесь, что путь существует и агенты имеют права на запись.
                         </p>
                     </div>
                 </div>
 
-                <!-- Step 2: Agent 注册 -->
+                <!-- Шаг 2: Регистрация -->
                 <div v-if="currentStep === 2" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="reg-token">注册令牌</Label>
+                        <Label for="reg-token">Токен регистрации</Label>
                         <div class="flex gap-2">
                             <Input id="reg-token" v-model="form.registrationToken" class="flex-1 font-mono text-sm" />
-                            <Button variant="outline" size="icon" @click="regenerateToken" title="重新生成">
+                            <Button variant="outline" size="icon" @click="regenerateToken" title="Пересоздать">
                                 <RefreshCw class="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="icon" @click="copyToken(form.registrationToken)" title="复制">
+                            <Button variant="outline" size="icon" @click="copyToken(form.registrationToken)" title="Копировать">
                                 <Copy class="h-4 w-4" />
                             </Button>
                         </div>
-                        <p class="text-xs text-muted-foreground">Agent 注册时需要此令牌来验证身份</p>
+                        <p class="text-xs text-muted-foreground">Агенты используют этот токен для идентификации</p>
                     </div>
                     <div class="flex items-center justify-between rounded-lg border p-3">
                         <div>
-                            <Label>允许 Agent 自注册</Label>
-                            <p class="text-xs text-muted-foreground">关闭后只能由管理员手动创建 Agent</p>
+                            <Label>Разрешить саморегистрацию агентов</Label>
+                            <p class="text-xs text-muted-foreground">При выключении агенты создаются только вручную</p>
                         </div>
                         <Switch v-model="allowRegistration" />
                     </div>
                 </div>
 
-                <!-- Step 3: 服务地址 -->
+                <!-- Шаг 3: Адрес -->
                 <div v-if="currentStep === 3" class="space-y-4">
                     <div class="space-y-2">
-                        <Label for="external-url">🌐 服务访问地址</Label>
-                        <Input id="external-url" v-model="form.externalUrl"
-                            placeholder="https://moss.example.com" />
+                        <Label for="external-url">🌐 Адрес сервера</Label>
+                        <Input id="external-url" v-model="form.externalUrl" placeholder="https://moss.example.com" />
                     </div>
 
                     <div class="rounded-lg border bg-muted/30 p-4 space-y-3">
                         <div>
-                            <p class="text-sm font-medium">💡 这是什么？</p>
+                            <p class="text-sm font-medium">💡 Что это?</p>
                             <p class="text-xs text-muted-foreground mt-1">
-                                你的 AI Agent 需要通过这个地址来：
+                                AI-агенты используют этот адрес для:
                             </p>
                             <ul class="text-xs text-muted-foreground mt-1 ml-4 list-disc space-y-0.5">
-                                <li>下载工作工具（task-cli.py）</li>
-                                <li>获取技能配置（SKILL.md）</li>
-                                <li>与任务系统通信、领取和提交任务</li>
+                                <li>Загрузки инструментов (task-cli.py)</li>
+                                <li>Получения конфигурации навыков (SKILL.md)</li>
+                                <li>Связи с системой задач</li>
                             </ul>
                         </div>
                         <div>
-                            <p class="text-sm font-medium">📝 填写说明</p>
+                            <p class="text-sm font-medium">📝 Инструкция</p>
                             <p class="text-xs text-muted-foreground mt-1">
-                                请填写本服务器可从外网访问的完整地址。服务默认端口为
-                                <code class="bg-muted px-1 py-0.5 rounded">6565</code>。
+                                Укажите полный внешний адрес сервера. Порт по умолчанию: <code class="bg-muted px-1 py-0.5 rounded">6565</code>.
                             </p>
                             <div class="flex flex-col gap-1 mt-2">
                                 <div class="flex items-center gap-2">
                                     <code class="text-xs bg-muted px-2 py-1 rounded">https://moss.example.com</code>
-                                    <span class="text-xs text-muted-foreground">← 使用反向代理（Nginx/Caddy）</span>
+                                    <span class="text-xs text-muted-foreground">← Обратный прокси (Nginx/Caddy)</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <code class="text-xs bg-muted px-2 py-1 rounded">http://123.45.67.89:6565</code>
-                                    <span class="text-xs text-muted-foreground">← 直接用 IP + 端口</span>
+                                    <span class="text-xs text-muted-foreground">← IP + порт</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <code class="text-xs bg-muted px-2 py-1 rounded">http://127.0.0.1:6565</code>
-                                    <span class="text-xs text-muted-foreground">← 本地测试用</span>
+                                    <span class="text-xs text-muted-foreground">← Локальная отладка</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <p class="text-xs text-muted-foreground">
-                        ⏩ 还没准备好？可以跳过，稍后在「系统设置」中配置
+                        ⏩ Пропустить? Можно настроить позже в «Настройках»
                     </p>
                 </div>
 
-                <!-- Step 4: 通知 -->
+                <!-- Шаг 4: Уведомления -->
                 <div v-if="currentStep === 4" class="space-y-4">
                     <div class="flex items-center justify-between rounded-lg border p-3">
                         <div>
-                            <Label>启用通知推送</Label>
-                            <p class="text-xs text-muted-foreground">Agent 完成任务、审查驳回等事件时发送通知</p>
+                            <Label>Включить уведомления</Label>
+                            <p class="text-xs text-muted-foreground">Агент отправляет уведомления о завершении, отклонении и т.д.</p>
                         </div>
                         <Switch v-model="notificationEnabled" />
                     </div>
 
                     <div v-if="notificationEnabled" class="space-y-2">
-                        <Label for="channels">通知渠道</Label>
+                        <Label for="channels">Каналы уведомлений</Label>
                         <textarea id="channels" v-model="form.notificationChannels"
                             class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            placeholder="每行一个，格式：类型:ID&#10;例如：chat:oc_xxx" />
+                            placeholder="По одному на строке, формат: тип:ID&#10;Пример: chat:oc_xxx" />
                         <p class="text-xs text-muted-foreground">
-                            此项可以稍后在「系统设置」中配置
+                            Можно настроить позже в «Настройках»
                         </p>
                     </div>
                 </div>
 
-                <!-- 错误提示 -->
+                <!-- Ошибка -->
                 <p v-if="error" class="mt-4 text-sm text-destructive">{{ error }}</p>
 
-                <!-- 导航按钮 -->
+                <!-- Навигация -->
                 <div class="mt-6 flex justify-between">
                     <Button v-if="currentStep > 0" variant="outline" @click="prevStep">
                         <ChevronLeft class="mr-1 h-4 w-4" />
-                        上一步
+                        Назад
                     </Button>
                     <div v-else />
 
                     <Button v-if="currentStep < totalSteps - 1" @click="nextStep" :disabled="!canProceed">
-                        下一步
+                        Далее
                         <ChevronRight class="ml-1 h-4 w-4" />
                     </Button>
                     <Button v-else @click="handleSubmit" :disabled="loading || !canProceed">
-                        {{ loading ? '正在初始化...' : '完成设置' }}
+                        {{ loading ? 'Инициализация…' : 'Завершить настройку' }}
                         <Check v-if="!loading" class="ml-1 h-4 w-4" />
                     </Button>
                 </div>
